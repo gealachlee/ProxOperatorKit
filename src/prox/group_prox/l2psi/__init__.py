@@ -1,2 +1,2 @@
-from prox.group_prox.l2psi.prox_cl import ProxL2_1, ProxL2_2over3, ProxL2_1over2, ProxL2_0, ProxL2_Arctan
-from prox.group_prox.prox_cl import  ProxL1_1over2, ProxL1_2over3,     ProxL1_1over2_FixParams, ProxL1_2over3_FixParams
+from prox.group_prox.l2psi.prox_cl import ProxL2_1, ProxL2_2over3, ProxL2_1over2, ProxL2_0, ProxL2_Arctan,ProxL2_LogSum,ProxL2_CappedL1over2
+from prox.group_prox.prox_cl import  ProxL1_1over2, ProxL1_2over3, ProxL1_1over2_FixParams, ProxL1_2over3_FixParams

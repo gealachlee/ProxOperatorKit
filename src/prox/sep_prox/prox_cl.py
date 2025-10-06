@@ -17,6 +17,8 @@ class ProxL1(ProximalOperator):
     def __call__(self, *args, **kwargs):
         return super().__call__(*args, **kwargs)
 
+    def latex_name(cls):
+        return r'$\ell_1$'
 
 class ProxL1over2(ProximalOperator):
 
@@ -31,6 +33,10 @@ class ProxL1over2(ProximalOperator):
     @classmethod
     def name(cls):
         return 'L1over2'
+
+    @classmethod
+    def latex_name(cls):
+        return r'$\ell_{1/2}$'
 
     def __call__(self, *args, **kwargs):
         return super().__call__(*args, **kwargs)
@@ -52,11 +58,13 @@ class ProxL2over3(ProximalOperator):
         return tao
 
 
-
-
     @classmethod
     def name(cls):
         return 'L2over3'
+
+    @classmethod
+    def latex_name(cls):
+        return r'$\ell_{2/3}$'
 
     def __call__(self, *args, **kwargs):
         return super().__call__(*args, **kwargs)
@@ -73,6 +81,10 @@ class ProxL0(ProximalOperator):
     @classmethod
     def name(cls):
         return 'L0'
+
+    @classmethod
+    def latex_name(cls):
+        return r'$\ell_0$'
 
     def __call__(self, *args, **kwargs):
         return super().__call__(*args, **kwargs)
@@ -110,8 +122,15 @@ class ProxArctan(ProximalOperator):
     def name(cls):
         return "arctan"
 
+    @classmethod
+    def latex_name(cls):
+        return r'${\rm{Arctan}}$'
+
+    @classmethod
     def __call__(self, *args, **kwargs):
         return super().__call__(*args, **kwargs)
+
+
 
 
 class ProxMCP(ProximalOperator):
@@ -185,6 +204,10 @@ class ProxSCAD(ProximalOperator):
     def name(cls):
         return 'SCAD'
 
+    @classmethod
+    def latex_name(cls):
+        return r'$\rm{SCAD}$'
+
     def calculate_subderivative(self, u, *args, **kwargs):
         """ for u>0
 
@@ -223,6 +246,7 @@ class ProxTransformedl1(ProximalOperator):
     def name(cls):
         return 'Tl1'
 
+
     def calculate_subderivative(self, u: np.ndarray, *args, **kwargs) -> np.ndarray:
         """ u>0
         :param u:
@@ -232,6 +256,10 @@ class ProxTransformedl1(ProximalOperator):
         """
         a = self.a
         return (a + 1) * a / ((u + a) ** 2)
+
+    @classmethod
+    def latex_name(cls):
+        return '${\rm{TL1}}$'
 
 
 class ProxCappedL1(ProximalOperator):
@@ -250,6 +278,10 @@ class ProxCappedL1(ProximalOperator):
     @classmethod
     def name(cls):
         return 'CappedL1'
+
+    @classmethod
+    def latex_name(cls):
+        return r'$\rm{CL1}$'
 
 
 def proxl0(x, lamb) -> np.ndarray:
@@ -334,3 +366,8 @@ class ProxCapped1over2(ProximalOperator):
     @classmethod
     def name(cls):
         return 'CappedL1over2'
+
+    @classmethod
+    def latex_name(cls):
+        return r'$\rm{CL1/2}$'
+

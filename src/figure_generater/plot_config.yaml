@@ -1,0 +1,17 @@
+# 绘图配置文件
+plot_width: 1000
+plot_height: 700
+font_size: 13
+font_family: "Microsoft YaHei"
+color_theme: "matplotlib"
+background_color: "#ffffff"
+line_color: "#2E8B57"
+line_width: 2.0
+grid_visible: true
+transparent: false
+dpi: 120
+save_format: "pdf"
+styles:
+  - "default"
+  - "classic"
+  - "seaborn-v0_8-darkgrid"

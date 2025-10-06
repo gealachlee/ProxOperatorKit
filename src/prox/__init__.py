@@ -5,7 +5,7 @@ __all__ = ['ProximalOperator', 'GroupProximalOperator']
 
 
 class ProximalOperator(metaclass=ABCMeta):
-    def calculate_subderivative(self, u: np.ndarray,*args,**kwargs) -> np.ndarray:
+    def calculate_subderivative(self, u: np.ndarray, *args, **kwargs) -> np.ndarray:
         raise NotImplementedError
 
     @classmethod
@@ -14,6 +14,20 @@ class ProximalOperator(metaclass=ABCMeta):
 
     @classmethod
     def prox(cls, x: np.ndarray, v, *args, **kwargs) -> np.ndarray:
+        """ calculate the proximal operator
+
+           :param x: np.ndarray, the input vector(matrix)
+           :param v: T, the threshold
+           :param args: None        :param kwargs: None
+           :return: np.ndarray, the proximal operator result
+        """
+        raise NotImplementedError
+
+    @classmethod
+    def latex_name(cls):
+        """
+        :return: the latex name of the proximal operator
+        """
         raise NotImplementedError
 
     @classmethod
@@ -23,12 +37,14 @@ class ProximalOperator(metaclass=ABCMeta):
     def __call__(self, *args, **kwargs):
         return self.prox(*args, **kwargs)
 
+    def __str__(self):
+        pass
+
 
 class GroupProximalOperator(ProximalOperator):
     n: int  # the dimension
     gLen: int  # the group length
     num_subvectors: int  # the number of subvectors
-
 
     __slots__ = ('n', 'gLen', 'num_subvectors', 'num_samples')
 
@@ -47,20 +63,6 @@ class GroupProximalOperator(ProximalOperator):
         :return:
         """
         raise NotImplementedError
-
-    def prox(self, x: np.ndarray, v, *args, **kwargs) -> np.ndarray:
-        """ calculate the proximal operator
-
-        :param x: np.ndarray, the input vector(matrix)
-        :param v: T, the threshold
-        :param args: None        :param kwargs: None
-        :return: np.ndarray, the proximal operator result
-        """
-        raise NotImplementedError
-
-    @classmethod
-    def name(cls):
-        raise cls.__name__
 
     def _split_vectors(self, x: np.ndarray) -> list[np.ndarray]:
         raise NotImplementedError

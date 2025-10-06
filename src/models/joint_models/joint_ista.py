@@ -5,19 +5,14 @@ import numpy as np
 from models.base import Model
 from models.block_models import ISTA
 
-class JointISTA(ISTA):
+class JointISTA(Model):
     def __init__(self, A: np.ndarray, tau,
                  prox_func1: Callable,
-                 prox_func2: Callable, order: int = 1):
-        assert order == 1 or order == 2, 'order must be 1 or 2'
-        if order == 1:
-            super().__init__(A, tau, prox_func1)
-            self.prox_func1 = prox_func1
-            self.prox_func2 = prox_func2
-        else:
-            super().__init__(A, tau, prox_func2)
-            self.prox_func1 = prox_func2
-            self.prox_func2 = prox_func1
+                 prox_func2: Callable):
+        super().__init__(A, tau)
+        self.tau = tau
+        self.prox_func1 = prox_func1
+        self.prox_func2 = prox_func2
         self.m, self.n = self.A.shape
         self.L_np = np.linalg.norm(np.matmul(A.transpose(), A), ord=2)
         self.gamma1 = 1 / np.linalg.norm(A, 2) ** 2

@@ -7,17 +7,20 @@
 """
 
 from munch import DefaultMunch
-
-from common import JointSparseConfig, SepSparsityType
 from config import init_log, NoiseParams
-from dataset.create_data import create_sc_dataset
-from joint_sparse_exp.exp_settings import exp2_opts
-from loss import objective_val
 from models import JointModelFactory, BlockModelFactory
-from prox.group_prox.general import GeneralProxL2Psi
-from prox.group_prox.l1psi_dev import *
-from prox.group_prox.prox_cl import *
-from prox.group_prox.l2psi.prox_cl import *
+from munch import DefaultMunch
+from common import SepSparsityType
+from config import init_log
+from dataset.create_data import create_sc_dataset
+
+from loss import objective_val
+from prox import ProximalOperator
+from prox.container import ProximalContainer
+import numpy as np
+from models import initialize_model
+from common.config import Settings, JointSparseConfig, NoiseConfig
+
 from prox.sep_prox.prox_cl import *
 from report import init_settings
 
@@ -41,6 +44,7 @@ opts.save_dir = f'./20250808/exp/'
 reporter = init_settings(opts, '20250808/different_L2psi')
 
 init_log(opts)
+
 name_list = [
     r'$L_{2,|·|_0}$',
     r'$L_{2,|\cdot|}$',
@@ -55,36 +59,45 @@ name_list = [
     r'$L_{2,{\rm CL1/2}}$',
 ]
 
+container = ProximalContainer(
+    n=opts.n,
+    gLen=opts.gLen,
+    data_size=opts.data_size
+
+)
+
+l1_psi_prox_list: list[ProximalOperator] = [
+    container.prox_1_1over2(),
+    container.prox_1_2over3(),
+    container.prox_1_mcp(),
+    container.prox_1_scad(),
+    container.prox_1_tl1()
+]
+
+mix_psi_prox_list: list[tuple[ProximalOperator, ProximalOperator]] = [
+    (container.prox_l0(),container.prox_2_0()),
+    (container.prox_l1(),container.prox_2_1()),
+    (container.prox_l1over2(),container.prox_2_1over2()),
+    (container.prox_l2over3(),container.prox_2_2over3())
+]
 
 
-# ---- Element wise Proximal Operators
-prox_l1 = ProxL1()
-prox_1over2 = ProxL1over2()
-prox_2over3 = ProxL2over3()
-prox_tl1 = ProxTransformedl1(fix_param1=1)
-prox_mcp = ProxMCP(fix_params=3.7)
-prox_scad = ProxSCAD(fix_param1=1, fix_param2=3.7)# a 尽可能小）
-prox_cl1 = ProxCappedL1(fix_param=1)
-prox_cl1over2 = ProxCapped1over2(fixparam=1)
-
-# ---- Group Proximal Operators
-prox_2_0 = ProxL2_0(opts.n, opts.gLen)
-prox_2_1 = ProxL2_1(opts.n, opts.gLen)
-prox_2_1over2 = ProxL2_1over2(opts.n, opts.gLen)
-prox_2_2over3 = ProxL2_2over3(opts.n, opts.gLen)
-prox_2_scad = GeneralProxL2Psi(opts.n, opts.gLen, prox_scad)
-prox_2_mcp = GeneralProxL2Psi(opts.n, opts.gLen, prox_mcp)
-prox_2_log = ProxL2_LogSum(opts.n, opts.gLen,epsilon=1)
-prox_2_arctan = ProxL2_Arctan(opts.n, opts.gLen, c=2)
-prox_2_tl1 = GeneralProxL2Psi(opts.n, opts.gLen, prox_tl1)
-prox_2_CL1 = GeneralProxL2Psi(opts.n, opts.gLen, prox_cl1)
-prox_2_CL1over2 = GeneralProxL2Psi(opts.n, opts.gLen, prox_cl1over2)
-
-experiment_prox = [prox_2_0,prox_2_1, prox_2_1over2, prox_2_2over3, prox_2_scad,
-                   prox_2_mcp, prox_2_log, prox_2_arctan, prox_2_tl1, prox_2_CL1, prox_2_CL1over2]
+l2_psi_prox_list: list[ProximalOperator] = [
+    container.prox_2_0(),
+    container.prox_2_1(),
+    container.prox_2_1over2(),
+    container.prox_2_2over3(),
+    container.prox_2_scad(),
+    container.prox_2_mcp(),
+    container.prox_2_log(),
+    container.prox_2_arctan(),
+    container.prox_2_tl1(),
+    container.prox_2_CL1(),
+    container.prox_2_CL1over2()
+]
 
 model_prox_dict = {
-    'GROUPIMTC': experiment_prox,  #
+    'GROUPIMTC': l2_psi_prox_list,  #
 }
 
 

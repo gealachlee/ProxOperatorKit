@@ -6,21 +6,52 @@
 @version: 2.0
 """
 import numpy as np
-from dataset import generat_sensing_mat
+
 from common.enum import SepSparsityType
+from functools import lru_cache
+
+import numpy as np
+from numpy.typing import NDArray
+from sklearn.preprocessing import normalize
+
+
+def generat_sensing_mat(m, n):
+    A = np.random.normal(size=(m, n))
+    return normalize(A, norm='l2', axis=0)
+
+
+# 类型别名
+FloatArray = NDArray[np.floating]
+IntArray = NDArray[np.integer]
+
+
+class SensingMatrixGenerator:
+    """感知矩阵生成器"""
+
+    @staticmethod
+    @lru_cache(maxsize=128)
+    def get_cached_matrix(m: int, n: int) -> FloatArray:
+        return generat_sensing_mat(m, n)
+
+
+class NoiseGenerator:
+    @classmethod
+    def normal(cls, sig, loc, scale, m):
+        return sig * np.random.normal(loc, scale, (m, 1, 1))
+
+    @classmethod
+    def laplace(cls, sig, loc, scale, m):
+        return sig * np.random.laplace(loc, scale, (m, 1, 1))
+
+    @classmethod
+    def rand(cls, sig, m):
+        return sig * np.random.rand(m)
 
 
 class SparsityHandler:
 
     @staticmethod
     def handle_group_sparsity(real_signal, opts):
-        # def handle_group_sparsity(n, gLen, sparsity):
-        #     gNo1 = np.arange(1, int(n / gLen) + 1)
-        #     Bs = np.zeros((n, 1))
-        #     ActInd = np.random.choice(gNo1, sparsity, replace=False)
-        #     for i in range(sparsity):
-        #         Bs[((ActInd[i] - 1) * gLen):(ActInd[i] * gLen)] = np.ones((gLen, 1))
-        #     return Bs
         size = opts.data_size
         n = opts.n
         gLen = opts.gLen
@@ -60,20 +91,17 @@ class SparsityHandler:
         return real_signal
 
 
-def create_sc_dataset(opts=None) -> (np.ndarray, np.ndarray, np.ndarray, np.ndarray):
+def create_sc_dataset(opts) -> (np.ndarray, np.ndarray, np.ndarray, np.ndarray):
     """
     :param opts: options in config.py
     :return:  (x_tensor, d_tensor), A, b
     """
-    if opts is None:
-        from config import Opts
-        opts = Opts
     np.random.seed(opts.data_seed)
     m, n = opts.m, opts.n
     sparsity = opts.sparsity
     # test_size = opts.data_size
 
-    A = generat_sensing_mat(m, n)
+    A = SensingMatrixGenerator.get_cached_matrix(m, n)
     c = np.random.normal(0, 1, (opts.data_size, n, 1))
 
     c = SparsityHandler.handle_group_sparsity(c, opts)
@@ -81,7 +109,6 @@ def create_sc_dataset(opts=None) -> (np.ndarray, np.ndarray, np.ndarray, np.ndar
         c = SparsityHandler.handle_sep_sparsity(c, opts)
 
     if opts.noise_params is not None:
-
         noise = make_noise_data(opts)
     else:
         noise = 0
@@ -95,13 +122,12 @@ def create_sc_dataset(opts=None) -> (np.ndarray, np.ndarray, np.ndarray, np.ndar
 
 def make_noise_data(opts):
     noise_params = opts.noise_params
-    m = opts.m
-    loc, scale = noise_params.loc, noise_params.scale
+    m, loc, scale = opts.m, noise_params.loc, noise_params.scale
     if noise_params.dist == 'normal':
-        noise = noise_params.sig * np.random.normal(loc, scale, (m, 1, 1))
+        noise = NoiseGenerator.normal(noise_params.sig, loc, scale, m)
     elif noise_params.dist == 'laplace':
-        noise = noise_params.sig * np.random.laplace(loc, scale, (m, 1, 1))
+        noise = NoiseGenerator.laplace(noise_params.sig, loc, scale, m)
     else:
-        noise = noise_params.sig * np.random.rand(m)
+        noise = NoiseGenerator.rand(noise_params.sig, m)
     print(f'\n-----{noise_params.dist}--{noise_params.sig} noise added-----\n')
     return noise

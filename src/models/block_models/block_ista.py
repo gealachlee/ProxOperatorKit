@@ -48,7 +48,6 @@ class ISTA(Model):
         return xk
 
     def model_name(self) -> str:
-        print('ISTA')
         return 'ISTA'
 
     def proximal_operator_name(self) -> str:

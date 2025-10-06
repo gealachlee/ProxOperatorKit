@@ -152,6 +152,20 @@ class GeneralProxL1Psi(GroupProximalOperator):
 class GeneralProxL2Psi(GroupProximalOperator):
 
     def __init__(self, n: int, gLen: int, subvec_prox: ProximalOperator):
+        """
+        初始化函数，用于创建一个新的实例。
+
+        参数:
+            n (int): 向量的总长度。
+            gLen (int): 每个子向量的长度。
+            subvec_prox (ProximalOperator): 用于子向量的近端算子实例。
+
+        属性:
+            n (int): 存储向量的总长度。
+            gLen (int): 存储每个子向量的长度。
+            num_subvectors (int): 计算并存储子向量的数量。
+            subvec_prox (ProximalOperator): 存储用于子向量的近端算子实例。
+        """
         self.n: int = n
         self.gLen: int = gLen
         self.num_subvectors: int = self.get_num_subvectors(n, gLen)

@@ -8,21 +8,21 @@
 import numpy as np
 from models.base import Model
 from typing import Callable
-from prox import ProximalOperator
+from prox import ProximalOperator, GroupProximalOperator
 
 __all__ = ['JointFISTA']
 
 
 class JointFISTA(Model):
 
-    def __init__(self, A: np.ndarray, tau, prox_func1: ProximalOperator, prox_func2: ProximalOperator):
+    def __init__(self, A: np.ndarray, tau, prox_func1: ProximalOperator, prox_func2: GroupProximalOperator):
         super().__init__(A, tau)
         self.m, self.n = self.A.shape
         self.L_np = np.linalg.norm(np.matmul(A.transpose(), A), ord=2)
         self.gamma1 = 1 / np.linalg.norm(A, 2) ** 2
         self.gamma2 = 1 - self.gamma1
         self.prox_func1: ProximalOperator = prox_func1
-        self.prox_func2: ProximalOperator = prox_func2
+        self.prox_func2: GroupProximalOperator = prox_func2
         self.iter_history: list = []
 
     def name(self):
