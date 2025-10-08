@@ -6,6 +6,7 @@ __pycache__/
 # C extensions
 *.so
 
+
 # Distribution / packaging
 .Python
 build/
@@ -137,6 +138,10 @@ output/
 history/exp/
 history/Glen8/
 history/history/
+
+# Rules
+rules/
+codebuddy/
 
 # IDE files
 .idea/

@@ -1,647 +1,372 @@
-# Computing Proximal Operators for a Class of Composite Group Sparse Functions
-# 基于 Lp-q 正则化的群组稀疏优化
+# Group Sparse Optimization (src/)
 
-[![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
-[![License](https://img.shields.io/badge/License-Academic-green.svg)](LICENSE)
-[![Research](https://img.shields.io/badge/Type-Research-orange.svg)](https://github.com)
+Language | 语言
+- [简体中文](#简体中文)
+- [English](#english)
 
-[English](#english) | [中文](#中文)
+---
+
+## 简体中文
+
+> 组稀疏（Group Sparsity）/联合稀疏（Joint Sparsity）优化研究项目。核心代码在 src/，包含：迭代模型（ISTA / FISTA / GROUPPGAC）、近端算子族（ℓ1/ℓ0/ℓ1/2/ℓ2/3/MCP/SCAD/TL1/Cappedℓ1/2 等）、数据生成、实验框架、结构化日志与绘图。
+
+[![Status](https://img.shields.io/badge/status-active-brightgreen.svg)](./)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](./)
+[![TypeHints](https://img.shields.io/badge/code-typed-informational.svg)](./)
+
+### 目录（Table of Contents）
+- [项目定位与特性](#项目定位与特性)
+- [环境与安装](#环境与安装)
+- [快速开始](#快速开始)
+- [目录结构（src/）](#目录结构src)
+- [命令与运行](#命令与运行)
+- [API 概览](#api-概览)
+- [实验复现流程](#实验复现流程)
+- [开发与贡献](#开发与贡献)
+- [版本与兼容性](#版本与兼容性)
+- [许可证与引用](#许可证与引用)
+- [联系方式](#联系方式)
+
+---
+
+### 项目定位与特性
+- 研究主题：线性观测 b = A x + noise 下的组/联合稀疏重建与优化。
+- 算法实现：ISTA、FISTA、GROUPPGAC 等迭代法，核心步骤为近端映射（Proximal Mapping）。
+- 近端算子族：支持凸与非凸（ℓ1、ℓ0、ℓ1/2、ℓ2/3、MCP、SCAD、TL1、Cappedℓ1、Cappedℓ1/2；含 ℓ1/3 原型）。
+- 指标：NMSE、Relative Error、SUCCESS_TIMES（成功率）、收敛曲线。
+- 工程能力：
+  - Pydantic v2 配置（Settings、NoiseConfig、JointSparseConfig、LogConfig）
+  - 依赖注入（dependency-injector）：ProximalContainer 统一产出算子实例
+  - 结构化日志（structlog）：report/Logger 单例
+  - 可视化：figure_generater（JSON 配置 + 对数坐标）
+
+---
+
+### 环境与安装
+- 要求：Python 3.10+
+- 安装（PowerShell）
+  ```
+  python -m venv .venv
+  .\.venv\Scripts\Activate.ps1
+  pip install -U pip
+  pip install numpy pandas matplotlib pydantic structlog dependency-injector munch
+  ```
+- 可选：使用 requirements.txt 锁定版本以确保复现性（如需我生成，请告知目标版本）。
+
+---
+
+### 快速开始
+- 演示（FISTA + CL/L1/2 家族）：
+  ```
+  python src/demo.py
+  ```
+- ℓ1/3 非凸近端实验（GROUPPGAC 原型）：
+  ```
+  python src/demo_l1over3.py
+  ```
+- 完整实验入口：
+  ```
+  # 组稀疏
+  python src/group_sparse_exp/exp_compare_loss.py
+  python src/group_sparse_exp/exp_success_rate.py
+
+  # 联合稀疏
+  python src/joint_sparse_exp/exp_compare_loss.py
+  python src/joint_sparse_exp/exp_success_rate.py
+  ```
+
+---
+
+### 目录结构（src/）
+- config.py：旧版噪声参数草案（NoiseParams）；推荐使用 common/config.py
+- loss.py：指标/目标（calculate_normalized_mean_squared_error、objective_val）
+- utils.py：通用工具（save_df）
+- common/
+  - common/config.py：Settings、NoiseConfig、JointSparseConfig、LogConfig；DistributionType、ObjectiveType、SeparableSparsityMode
+  - common/enum.py：枚举定义
+- dataset/
+  - dataset/create_data.py：create_sc_dataset → ((x_test, d_test), A, b)
+- experiment/
+  - experiment/__init__.py：Experiment 抽象；Record/RecordContainer（Pydantic）
+  - experiment/experiment.py：MSELossExperiment、SuccessRateExperiment
+- models/
+  - models/base.py：Model/GroupModel/JointModel 抽象
+  - models/block_models/：ISTA、FISTA、GROUPPGAC
+  - models/joint_models/：JointISTA、JointFISTA、PGAC
+- prox/
+  - prox/__init__.py：ProximalOperator / GroupProximalOperator 抽象
+  - prox/container.py：ProximalContainer（依赖注入工厂）
+  - prox/sep_prox/：分量型近端族（ℓ1、ℓ1/2、ℓ2/3、ℓ0、MCP、SCAD、TL1、Cappedℓ1、Cappedℓ1/2）；dev.py 含 ℓ1/3
+  - prox/group_prox/：组型近端族（L1_1/2、L1_2/3、GeneralProxL2Psi）
+  - prox/group_prox/l2psi/prox_cl.py：L2_ψ（|·|、|·|^{1/2}、|·|^{2/3}、LOG、Arctan、CL1/2）
+- figure_generater/
+  - plot_config.py（Pydantic 配置）、plot.py；plot_config_compare_exp.json
+- report/
+  - reporter.py：Logger 单例、mkdir
+- group_sparse_exp/ 与 joint_sparse_exp/
+  - exp_compare_loss.py、exp_success_rate.py（含 if __name__ == '__main__'）
+
+---
+
+### 命令与运行
+- 列出含入口的脚本：
+  ```
+  Get-ChildItem src -Recurse -Filter *.py | Select-String "__name__ == '__main__'" -List
+  ```
+- 常用命令：
+  ```
+  # 组稀疏对比实验
+  python src/group_sparse_exp/exp_compare_loss.py
+
+  # 联合稀疏成功率实验
+  python src/joint_sparse_exp/exp_success_rate.py
+
+  # 生成图像（需 figure_generater 配置）
+  python src/demo_l1over3.py
+  ```
+
+---
+
+### API 概览
+- 配置（src/common/config.py）
+  - Settings：K、tau、m、n、data_size、dist、gLen、sparsity、objective、plot_figs、log_config、noise_params、joint_sparse_config
+  - JointSparseConfig：is_joint_sparse、mode（percentage 等）、p
+  - NoiseConfig：sig；LogConfig：file_dir、file_name、file_mode
+- 数据（src/dataset/create_data.py）
+  - create_sc_dataset(opts) -> ((x_test, d_test), A, b)
+- 指标（src/loss.py）
+  - calculate_normalized_mean_squared_error(x, x_gt)
+  - objective_val(x, d, x_gt, objective): 'Repeat NMSE' / 'GT' / 'NMSE' / 'RELATIVE' / 'SUCCESS_TIMES'
+- 近端（src/prox/）
+  - 抽象：ProximalOperator / GroupProximalOperator（prox、obj、name、latex_name）
+  - 分量型：ProxL1、ProxL1over2、ProxL2over3、ProxL0、ProxMCP、ProxSCAD、ProxTransformedl1（TL1）、ProxCappedL1、ProxCapped1over2
+  - 组型：ProxL1_1over2、ProxL1_2over3、GeneralProxL2Psi、L2_ψ 系列
+  - 容器：ProximalContainer（依赖注入与组合）
+- 模型（src/models/）
+  - 抽象：Model、GroupModel、JointModel
+  - 组稀疏：ISTA、FISTA、GROUPPGAC；联合稀疏：JointISTA、JointFISTA、PGAC
+- 日志（src/report/reporter.py）
+  - Logger 单例：`Logger(**opts.log_config.model_dump()).logger`
+
+---
+
+### 实验复现流程
+1) 准备环境与依赖（建议锁定版本）
+2) 选择脚本（demo / demo_l1over3 / group_* / joint_*）
+3) 配置 Settings（K、tau、sparsity、gLen、data_seed、objective）
+4) 使用 ProximalContainer 组合近端族
+5) 运行 MSELossExperiment 或 SuccessRateExperiment
+6) 使用 figure_generater 绘制曲线（可选）
+7) 查看日志输出与图像（默认 `1.png`）
+
+---
+
+### 开发与贡献
+- 风格：PEP8 + 类型注解；Pydantic v2 用于配置与模型
+- 架构：函数式优先、模块化；src/ 下分层清晰（common/dataset/experiment/models/prox/report）
+- 扩展：
+  - 近端：在 prox/sep_prox/ 或 prox/group_prox/ 中新增，遵循抽象接口；接入 ProximalContainer
+  - 模型：在 models/block_models/ 或 models/joint_models/ 中新增，继承基类
+  - 实验：在 experiment/ 中实现，入口放 group_sparse_exp/ 或 joint_sparse_exp/
+- PR 规范：包含变更说明、最小复现实例（命令、配置、日志/图像）
+- Issues：附环境信息、配置、复现步骤与日志片段
+
+---
+
+### 版本与兼容性
+- Python：3.10+（建议）
+- 依赖：numpy / pandas / matplotlib / pydantic v2 / structlog / dependency-injector / munch
+- 非凸近端（ℓ1/3、ℓ1/2、TL1、Cappedℓ1/2）对阈值与数值稳定性敏感；tau 调参建议结合 Lipschitz 估计。
+
+---
+
+### 许可证与引用
+- License：如未声明，默认研究用途；其他用途请征询作者授权
+- Citation：如使用本仓库或近端设计，请在论文/报告中引用作者与仓库链接
+
+---
+
+### 联系方式
+- Authors: Zhihong Li (gealachlee@126.com), Rongrong Lin (linrr@gdut.edu.cn)
+- Issues：请在仓库 Issue 区反馈
 
 ---
 
 ## English
 
-### Overview
+> An engineering and reproducible project for Group/Joint Sparse Optimization. Core code under src/ includes iterative models (ISTA / FISTA / GROUPPGAC), a rich proximal operator family (ℓ1/ℓ0/ℓ1/2/ℓ2/3/MCP/SCAD/TL1/Cappedℓ1/2), data generation, experiment framework, structured logging, and plotting.
 
-This repository implements a comprehensive framework for **group sparse optimization** with **Lp-q regularization**. The project focuses on advanced proximal gradient methods and various proximal operators for solving structured sparsity problems in signal processing, machine learning, and compressed sensing applications.
+[![Status](https://img.shields.io/badge/status-active-brightgreen.svg)](./)
+[![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](./)
+[![TypeHints](https://img.shields.io/badge/code-typed-informational.svg)](./)
 
-The framework provides implementations of state-of-the-art algorithms including **IMTC (Iterative Mixed-Thresholding with Convergence)**, **FISTA**, and **ISTA**, combined with novel proximal operators for both separable and group-structured sparsity patterns.
-
-### Key Features
-
-#### 🔬 **Advanced Proximal Operators**
-- **L1-Ψ Proximal Operators**: 
-  - Capped L1 (CL1) and Capped L1/2 (CL1/2)
-  - MCP (Minimax Concave Penalty)
-  - SCAD (Smoothly Clipped Absolute Deviation)
-  - Transformed L1 (TL1)
-- **L2-Ψ Group Proximal Operators**:
-  - L2-L0, L2-L1, L2-L1/2, L2-L2/3
-  - Group-wise MCP, SCAD, and logarithmic penalties
-  - Arctangent-based regularization
-
-#### 🚀 **Optimization Algorithms**
-- **IMTC**: Iterative Mixed-Thresholding with adaptive convergence
-- **FISTA**: Fast Iterative Shrinkage-Thresholding Algorithm
-- **ISTA**: Iterative Shrinkage-Thresholding Algorithm
-- **Joint Sparse Models**: Multi-task learning with shared sparsity patterns
-
-#### 📊 **Comprehensive Evaluation Framework**
-- Success rate analysis across different sparsity levels
-- Convergence behavior visualization
-- Performance metrics: NMSE, relative error, success rate
-- Automated experimental pipeline with configurable parameters
-
-### Mathematical Foundation
-
-The framework solves optimization problems of the form:
-
-```
-min_{x} (1/2)||Ax - d||²₂ + τ·Ψ(x)
-```
-
-where:
-- `A ∈ ℝᵐˣⁿ` is the sensing matrix
-- `d ∈ ℝᵐ` is the observation vector  
-- `τ > 0` is the regularization parameter
-- `Ψ(x)` is a sparsity-inducing penalty function
-
-For group sparse problems:
-```
-Ψ(x) = Σᵢ φ(||xᵢ||ₚ)
-```
-where `xᵢ` represents the i-th group and `φ` is a penalty function.
-
-### Project Architecture
-
-```
-group-sparse-optimization/
-├── src/                           # Source code
-│   ├── demo.py                   # Main demonstration script
-│   ├── config.py                 # Global configuration
-│   ├── loss.py                   # Loss function implementations
-│   ├── utils.py                  # Utility functions
-│   │
-│   ├── models/                   # Optimization algorithms
-│   │   ├── base.py              # Abstract base model
-│   │   ├── joint_models/        # Joint sparse optimization
-│   │   │   ├── IMTC.py         # IMTC algorithm implementation
-│   │   │   ├── joint_fista.py  # Joint FISTA
-│   │   │   └── joint_ista.py   # Joint ISTA
-│   │   └── block_models/        # Block-wise models
-│   │       ├── block_fista.py  # Block FISTA
-│   │       ├── block_ista.py   # Block ISTA
-│   │       └── mix_block.py    # Mixed block models
-│   │
-│   ├── prox/                    # Proximal operators
-│   │   ├── container.py         # Proximal operator factory
-│   │   ├── group_prox/          # Group proximal operators
-│   │   │   ├── general.py      # General framework
-│   │   │   ├── l1psi.py        # L1-Ψ operators
-│   │   │   ├── prox_cl.py      # Capped L1 operators
-│   │   │   └── l2psi/          # L2-Ψ operators
-│   │   │       └── prox_cl.py  # L2-based operators
-│   │   └── sep_prox/            # Separable proximal operators
-│   │       └── prox_cl.py      # Element-wise operators
-│   │
-│   ├── dataset/                 # Data generation
-│   │   └── create_data.py      # Synthetic dataset creation
-│   │
-│   ├── common/                  # Common utilities
-│   │   ├── config.py           # Configuration classes
-│   │   └── enum.py             # Enumeration types
-│   │
-│   ├── exp/                     # Experimental scripts
-│   ├── group_sparse_exp/        # Group sparsity experiments
-│   ├── joint_sparse_exp/        # Joint sparsity experiments
-│   │   ├── main.py             # Main experiment runner
-│   │   ├── exp_success_rate.py # Success rate analysis
-│   │   └── plot_*.py           # Visualization scripts
-│   │
-│   ├── output/                  # Experimental results
-│   └── report/                  # Report generation
-│       └── reporter.py         # Result reporting
-│
-├── requirements.txt             # Python dependencies
-└── README.md                   # This file
-```
-
-### Installation
-
-#### Prerequisites
-- Python 3.8 or higher
-- NumPy, SciPy, Matplotlib
-- Pandas, Scikit-learn
-
-#### Setup Instructions
-
-1. **Clone the repository**:
-```bash
-git clone https://github.com/your-username/group-sparse-optimization.git
-cd group-sparse-optimization
-```
-
-2. **Create virtual environment** (recommended):
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. **Install dependencies**:
-```bash
-pip install -r requirements.txt
-```
-
-### Usage
-
-#### Quick Start
-
-```bash
-cd src
-python demo.py
-```
-
-#### Configuration
-
-The main configuration is handled through `src/config.py` and `src/common/config.py`:
-
-```python
-from common.config import Settings, NoiseConfig, JointSparseConfig
-
-opts = Settings(
-    K=1000,                    # Maximum iterations
-    tau=0.1,                   # Regularization parameter
-    m=256,                     # Sensing matrix rows
-    n=1024,                    # Sensing matrix columns
-    data_size=64,              # Number of samples
-    sparsity=8,                # Group sparsity level
-    gLen=16,                   # Group length
-    noise_params=NoiseConfig(sig=0.001),
-    joint_sparse_config=JointSparseConfig(
-        is_joint_sparse=True,
-        p=0.8
-    )
-)
-```
-
-#### Running Experiments
-
-1. **Basic experiment**:
-```bash
-cd src
-python demo.py
-```
-
-2. **Joint sparse experiments**:
-```bash
-cd src/joint_sparse_exp
-python main.py
-```
-
-3. **Success rate analysis**:
-```bash
-cd src/joint_sparse_exp
-python exp_success_rate.py
-```
-
-#### Custom Experiments
-
-```python
-from prox.container import ProximalContainer
-from models import initialize_model
-
-# Create proximal operator container
-container = ProximalContainer(n=1024, gLen=16, data_size=64)
-
-# Select proximal operators
-prox_operators = [
-    container.prox_1_1over2(),    # L1-1/2 penalty
-    container.prox_1_mcp(),       # MCP penalty
-    container.prox_2_scad()       # L2-SCAD penalty
-]
-
-# Initialize and run model
-for prox_func in prox_operators:
-    model = initialize_model('IMTC', prox_func, A, opts)
-    result = model(data, K=1000)
-```
-
-### Experimental Results
-
-The framework generates comprehensive experimental results:
-
-- **Convergence Analysis**: Loss evolution over iterations
-- **Success Rate Curves**: Performance across different sparsity levels
-- **Comparative Studies**: Algorithm performance comparison
-- **Visualization**: Automated plot generation for results
-
-Results are saved in structured formats:
-- `output/`: Numerical results and logs
-- `joint_sparse_exp/exp/`: Experimental plots and data
-- Automatic Excel export for further analysis
-
-### Key Components
-
-#### Proximal Operators (`src/prox/`)
-
-The framework implements a rich collection of proximal operators:
-
-**Separable Operators**:
-- L0, L1, L1/2, L2/3 norms
-- MCP, SCAD penalties
-- Transformed L1 (TL1)
-
-**Group Operators**:
-- L2-Lp mixed norms
-- Group MCP, SCAD
-- Capped penalties
-
-#### Models (`src/models/`)
-
-**IMTC Algorithm**: Novel iterative mixed-thresholding with adaptive parameters
-```python
-class IMTC(Model):
-    def T(self, x, d, **kwargs):
-        # Gradient step
-        r = (self.A @ x.T).T - d
-        z = x - self.stepsize * 2 * (self.A.T @ r.T).T
-        
-        # Mixed thresholding
-        z = self.prox_func1(z, self.gamma2)
-        Tx = self.prox_func2(z, self.gamma1 + self.gamma2 * penalty_term)
-        return Tx
-```
-
-#### Dataset Generation (`src/dataset/`)
-
-Supports various data generation scenarios:
-- Gaussian and Laplacian sensing matrices
-- Configurable sparsity patterns
-- Joint sparse structures
-- Noise injection with different distributions
-
-### Performance Benchmarks
-
-Typical performance on standard test cases:
-
-| Algorithm | Sparsity Level | Success Rate | Convergence Speed |
-|-----------|----------------|--------------|-------------------|
-| IMTC-L1/2 | 8/64 groups   | 95%+         | ~200 iterations   |
-| IMTC-MCP  | 12/64 groups  | 90%+         | ~300 iterations   |
-| FISTA-L1  | 8/64 groups   | 85%+         | ~500 iterations   |
-
-### Research Applications
-
-This framework has been applied to:
-- **Compressed Sensing**: Sparse signal recovery
-- **Multi-task Learning**: Joint feature selection
-- **Image Processing**: Structured sparsity in transforms
-- **Biomedical Signal Processing**: EEG/fMRI analysis
-
-### Contributing
-
-We welcome contributions! Please see our contribution guidelines:
-
-1. Fork the repository
-2. Create a feature branch
-3. Implement your changes with tests
-4. Submit a pull request
-
-### Citation
-
-If you use this code in your research, please cite:
-
-```bibtex
-@software{group_sparse_optimization,
-  title={Group Sparse Optimization with Lp-q Regularization},
-  author={Li, Zhihong and Lin, Rongrong},
-  year={2024},
-  url={https://github.com/your-username/group-sparse-optimization}
-}
-```
-
-### Authors
-
-- **Zhihong Li** - Algorithm development and implementation
-- **Rongrong Lin** - Theoretical analysis and optimization
-
-### License
-
-This project is released under an Academic License. Please cite appropriately if used in academic work.
+### Table of Contents
+- [Features](#features)
+- [Environment & Installation](#environment--installation)
+- [Quick Start](#quick-start)
+- [Folder Tree (src/)](#folder-tree-src)
+- [Commands & Running](#commands--running)
+- [API Overview](#api-overview)
+- [Reproducibility Pipeline](#reproducibility-pipeline)
+- [Development & Contributing](#development--contributing)
+- [Version & Compatibility](#version--compatibility)
+- [License & Citation](#license--citation)
+- [Contact](#contact)
 
 ---
 
-## 中文
-
-### 项目概述
-
-本仓库实现了一个基于 **Lp-q 正则化的群组稀疏优化**综合框架。项目专注于先进的近端梯度方法和各种近端算子，用于解决信号处理、机器学习和压缩感知应用中的结构化稀疏问题。
-
-该框架提供了最先进算法的实现，包括 **IMTC（带收敛性的迭代混合阈值算法）**、**FISTA** 和 **ISTA**，结合了用于可分离和群组结构稀疏模式的新颖近端算子。
-
-### 核心特性
-
-#### 🔬 **先进的近端算子**
-- **L1-Ψ 近端算子**：
-  - 截断 L1 (CL1) 和截断 L1/2 (CL1/2)
-  - MCP（极小极大凹惩罚）
-  - SCAD（平滑截断绝对偏差）
-  - 变换 L1 (TL1)
-- **L2-Ψ 群组近端算子**：
-  - L2-L0、L2-L1、L2-L1/2、L2-L2/3
-  - 群组 MCP、SCAD 和对数惩罚
-  - 基于反正切的正则化
-
-#### 🚀 **优化算法**
-- **IMTC**：带自适应收敛的迭代混合阈值算法
-- **FISTA**：快速迭代收缩阈值算法
-- **ISTA**：迭代收缩阈值算法
-- **联合稀疏模型**：具有共享稀疏模式的多任务学习
-
-#### 📊 **全面的评估框架**
-- 不同稀疏度水平的成功率分析
-- 收敛行为可视化
-- 性能指标：NMSE、相对误差、成功率
-- 具有可配置参数的自动化实验流水线
-
-### 数学基础
-
-该框架解决以下形式的优化问题：
-
-```
-min_{x} (1/2)||Ax - d||²₂ + τ·Ψ(x)
-```
-
-其中：
-- `A ∈ ℝᵐˣⁿ` 是感知矩阵
-- `d ∈ ℝᵐ` 是观测向量
-- `τ > 0` 是正则化参数
-- `Ψ(x)` 是稀疏诱导惩罚函数
-
-对于群组稀疏问题：
-```
-Ψ(x) = Σᵢ φ(||xᵢ||ₚ)
-```
-其中 `xᵢ` 表示第 i 个群组，`φ` 是惩罚函数。
-
-### 项目架构
-
-```
-group-sparse-optimization/
-├── src/                           # 源代码
-│   ├── demo.py                   # 主演示脚本
-│   ├── config.py                 # 全局配置
-│   ├── loss.py                   # 损失函数实现
-│   ├── utils.py                  # 工具函数
-│   │
-│   ├── models/                   # 优化算法
-│   │   ├── base.py              # 抽象基础模型
-│   │   ├── joint_models/        # 联合稀疏优化
-│   │   │   ├── IMTC.py         # IMTC 算法实现
-│   │   │   ├── joint_fista.py  # 联合 FISTA
-│   │   │   └── joint_ista.py   # 联合 ISTA
-│   │   └── block_models/        # 块模型
-│   │       ├── block_fista.py  # 块 FISTA
-│   │       ├── block_ista.py   # 块 ISTA
-│   │       └── mix_block.py    # 混合块模型
-│   │
-│   ├── prox/                    # 近端算子
-│   │   ├── container.py         # 近端算子工厂
-│   │   ├── group_prox/          # 群组近端算子
-│   │   │   ├── general.py      # 通用框架
-│   │   │   ├── l1psi.py        # L1-Ψ 算子
-│   │   │   ├── prox_cl.py      # 截断 L1 算子
-│   │   │   └── l2psi/          # L2-Ψ 算子
-│   │   │       └── prox_cl.py  # 基于 L2 的算子
-│   │   └── sep_prox/            # 可分离近端算子
-│   │       └── prox_cl.py      # 逐元素算子
-│   │
-│   ├── dataset/                 # 数据生成
-│   │   └── create_data.py      # 合成数据集创建
-│   │
-│   ├── common/                  # 通用工具
-│   │   ├── config.py           # 配置类
-│   │   └── enum.py             # 枚举类型
-│   │
-│   ├── exp/                     # 实验脚本
-│   ├── group_sparse_exp/        # 群组稀疏实验
-│   ├── joint_sparse_exp/        # 联合稀疏实验
-│   │   ├── main.py             # 主实验运行器
-│   │   ├── exp_success_rate.py # 成功率分析
-│   │   └── plot_*.py           # 可视化脚本
-│   │
-│   ├── output/                  # 实验结果
-│   └── report/                  # 报告生成
-│       └── reporter.py         # 结果报告
-│
-├── requirements.txt             # Python 依赖
-└── README.md                   # 本文件
-```
-
-### 安装说明
-
-#### 系统要求
-- Python 3.8 或更高版本
-- NumPy、SciPy、Matplotlib
-- Pandas、Scikit-learn
-
-#### 安装步骤
-
-1. **克隆仓库**：
-```bash
-git clone https://github.com/your-username/group-sparse-optimization.git
-cd group-sparse-optimization
-```
-
-2. **创建虚拟环境**（推荐）：
-```bash
-python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
-```
-
-3. **安装依赖**：
-```bash
-pip install -r requirements.txt
-```
-
-### 使用方法
-
-#### 快速开始
-
-```bash
-cd src
-python demo.py
-```
-
-#### 配置说明
-
-主要配置通过 `src/config.py` 和 `src/common/config.py` 处理：
-
-```python
-from common.config import Settings, NoiseConfig, JointSparseConfig
-
-opts = Settings(
-    K=1000,                    # 最大迭代次数
-    tau=0.1,                   # 正则化参数
-    m=256,                     # 感知矩阵行数
-    n=1024,                    # 感知矩阵列数
-    data_size=64,              # 样本数量
-    sparsity=8,                # 群组稀疏度
-    gLen=16,                   # 群组长度
-    noise_params=NoiseConfig(sig=0.001),
-    joint_sparse_config=JointSparseConfig(
-        is_joint_sparse=True,
-        p=0.8
-    )
-)
-```
-
-#### 运行实验
-
-1. **基础实验**：
-```bash
-cd src
-python demo.py
-```
-
-2. **联合稀疏实验**：
-```bash
-cd src/joint_sparse_exp
-python main.py
-```
-
-3. **成功率分析**：
-```bash
-cd src/joint_sparse_exp
-python exp_success_rate.py
-```
-
-#### 自定义实验
-
-```python
-from prox.container import ProximalContainer
-from models import initialize_model
-
-# 创建近端算子容器
-container = ProximalContainer(n=1024, gLen=16, data_size=64)
-
-# 选择近端算子
-prox_operators = [
-    container.prox_1_1over2(),    # L1-1/2 惩罚
-    container.prox_1_mcp(),       # MCP 惩罚
-    container.prox_2_scad()       # L2-SCAD 惩罚
-]
-
-# 初始化并运行模型
-for prox_func in prox_operators:
-    model = initialize_model('IMTC', prox_func, A, opts)
-    result = model(data, K=1000)
-```
-
-### 实验结果
-
-该框架生成全面的实验结果：
-
-- **收敛分析**：迭代过程中的损失演化
-- **成功率曲线**：不同稀疏度水平的性能
-- **比较研究**：算法性能比较
-- **可视化**：结果的自动图表生成
-
-结果以结构化格式保存：
-- `output/`：数值结果和日志
-- `joint_sparse_exp/exp/`：实验图表和数据
-- 自动 Excel 导出以供进一步分析
-
-### 核心组件
-
-#### 近端算子 (`src/prox/`)
-
-框架实现了丰富的近端算子集合：
-
-**可分离算子**：
-- L0、L1、L1/2、L2/3 范数
-- MCP、SCAD 惩罚
-- 变换 L1 (TL1)
-
-**群组算子**：
-- L2-Lp 混合范数
-- 群组 MCP、SCAD
-- 截断惩罚
-
-#### 模型 (`src/models/`)
-
-**IMTC 算法**：具有自适应参数的新颖迭代混合阈值算法
-```python
-class IMTC(Model):
-    def T(self, x, d, **kwargs):
-        # 梯度步
-        r = (self.A @ x.T).T - d
-        z = x - self.stepsize * 2 * (self.A.T @ r.T).T
-        
-        # 混合阈值
-        z = self.prox_func1(z, self.gamma2)
-        Tx = self.prox_func2(z, self.gamma1 + self.gamma2 * penalty_term)
-        return Tx
-```
-
-#### 数据集生成 (`src/dataset/`)
-
-支持各种数据生成场景：
-- 高斯和拉普拉斯感知矩阵
-- 可配置的稀疏模式
-- 联合稀疏结构
-- 不同分布的噪声注入
-
-### 性能基准
-
-标准测试用例的典型性能：
-
-| 算法      | 稀疏度水平    | 成功率 | 收敛速度      |
-|-----------|---------------|--------|---------------|
-| IMTC-L1/2 | 8/64 群组     | 95%+   | ~200 次迭代   |
-| IMTC-MCP  | 12/64 群组    | 90%+   | ~300 次迭代   |
-| FISTA-L1  | 8/64 群组     | 85%+   | ~500 次迭代   |
-
-### 研究应用
-
-该框架已应用于：
-- **压缩感知**：稀疏信号恢复
-- **多任务学习**：联合特征选择
-- **图像处理**：变换中的结构化稀疏
-- **生物医学信号处理**：EEG/fMRI 分析
-
-### 贡献指南
-
-我们欢迎贡献！请参阅我们的贡献指南：
-
-1. Fork 仓库
-2. 创建功能分支
-3. 实现您的更改并添加测试
-4. 提交 pull request
-
-### 引用
-
-如果您在研究中使用此代码，请引用：
-
-```bibtex
-@software{group_sparse_optimization,
-  title={Group Sparse Optimization with Lp-q Regularization},
-  author={Li, Zhihong and Lin, Rongrong},
-  year={2024},
-  url={https://github.com/your-username/group-sparse-optimization}
-}
-```
-
-### 作者
-
-- **李志宏** - 算法开发和实现
-- **林荣荣** - 理论分析和优化
-
-### 许可证
-
-本项目在学术许可证下发布。如在学术工作中使用，请适当引用。
+### Features
+- Topic: Sparse reconstruction under group/joint priors (b = A x + noise).
+- Algorithms: ISTA, FISTA, GROUPPGAC with proximal mappings.
+- Proximal families: convex and nonconvex (ℓ1, ℓ0, ℓ1/2, ℓ2/3, MCP, SCAD, TL1, Cappedℓ1/2; ℓ1/3 prototype).
+- Metrics: NMSE, Relative Error, SUCCESS_TIMES; convergence curves and success rates.
+- Engineering:
+  - Pydantic v2 settings (Settings, NoiseConfig, JointSparseConfig, LogConfig).
+  - Dependency injection via ProximalContainer.
+  - Structured logging with structlog (singleton Logger).
+  - Plotting via figure_generater with JSON config and log-scale axes.
 
 ---
 
-## Contact | 联系方式
-
-For questions and collaboration opportunities, please contact:
-如有问题和合作机会，请联系：
-
-- **Email**: [your-email@university.edu]
-- **GitHub Issues**: [Project Issues](https://github.com/your-username/group-sparse-optimization/issues)
+### Environment & Installation
+- Requirements: Python 3.10+
+- Install (Windows PowerShell):
+  ```
+  python -m venv .venv
+  .\.venv\Scripts\Activate.ps1
+  pip install -U pip
+  pip install numpy pandas matplotlib pydantic structlog dependency-injector munch
+  ```
+- Optional: pin versions in requirements.txt for reproducibility.
 
 ---
 
-**Keywords**: Group Sparsity, Proximal Operators, IMTC, FISTA, Compressed Sensing, L1 Regularization, MCP, SCAD
-**关键词**: 群组稀疏, 近端算子, IMTC, FISTA, 压缩感知, L1正则化, MCP, SCAD
+### Quick Start
+- Demo (FISTA + CL/L1/2 family):
+  ```
+  python src/demo.py
+  ```
+- ℓ1/3 nonconvex proximal experiment (GROUPPGAC prototype):
+  ```
+  python src/demo_l1over3.py
+  ```
+- Full entrypoints:
+  ```
+  # Group sparsity
+  python src/group_sparse_exp/exp_compare_loss.py
+  python src/group_sparse_exp/exp_success_rate.py
+
+  # Joint sparsity
+  python src/joint_sparse_exp/exp_compare_loss.py
+  python src/joint_sparse_exp/exp_success_rate.py
+  ```
+
+---
+
+### Folder Tree (src/)
+- config.py: legacy NoiseParams (prefer common/config.py)
+- loss.py: metrics/objectives (calculate_normalized_mean_squared_error, objective_val)
+- utils.py: utilities (save_df)
+- common/
+  - common/config.py: Settings, NoiseConfig, JointSparseConfig, LogConfig; DistributionType, ObjectiveType, SeparableSparsityMode
+  - common/enum.py: enums
+- dataset/
+  - dataset/create_data.py: create_sc_dataset → ((x_test, d_test), A, b)
+- experiment/
+  - experiment/__init__.py: Experiment abstraction; Record/RecordContainer (Pydantic)
+  - experiment/experiment.py: MSELossExperiment, SuccessRateExperiment
+- models/
+  - models/base.py: Model/GroupModel/JointModel abstractions
+  - block_models/: ISTA, FISTA, GROUPPGAC
+  - joint_models/: JointISTA, JointFISTA, PGAC
+- prox/
+  - prox/__init__.py: ProximalOperator / GroupProximalOperator abstractions
+  - container.py: ProximalContainer (DI factory)
+  - sep_prox/: separable proximals (ℓ1, ℓ1/2, ℓ2/3, ℓ0, MCP, SCAD, TL1, Cappedℓ1, Cappedℓ1/2); dev.py with ℓ1/3
+  - group_prox/: group proximals (L1_1/2, L1_2/3, GeneralProxL2Psi)
+  - group_prox/l2psi/prox_cl.py: L2_ψ series (|·|, |·|^{1/2}, |·|^{2/3}, LOG, Arctan, CL1/2)
+- figure_generater/
+  - plot_config.py (Pydantic), plot.py; plot_config_compare_exp.json
+- report/
+  - reporter.py: Logger (structlog singleton), mkdir
+- group_sparse_exp/ & joint_sparse_exp/
+  - exp_compare_loss.py, exp_success_rate.py (with if __name__ == '__main__')
+
+---
+
+### Commands & Running
+- List main-entry scripts:
+  ```
+  Get-ChildItem src -Recurse -Filter *.py | Select-String "__name__ == '__main__'" -List
+  ```
+- Examples:
+  ```
+  python src/group_sparse_exp/exp_compare_loss.py
+  python src/joint_sparse_exp/exp_success_rate.py
+  python src/demo_l1over3.py  # saves 1.png by default
+  ```
+
+---
+
+### API Overview
+- Config (src/common/config.py)
+  - Settings: K, tau, m, n, data_size, dist, gLen, sparsity, objective, plot_figs, log_config, noise_params, joint_sparse_config
+  - JointSparseConfig: is_joint_sparse, mode (percentage), p
+  - NoiseConfig: sig; LogConfig: file_dir, file_name, file_mode
+- Data (src/dataset/create_data.py)
+  - create_sc_dataset(opts) -> ((x_test, d_test), A, b)
+- Metrics (src/loss.py)
+  - calculate_normalized_mean_squared_error(x, x_gt)
+  - objective_val(x, d, x_gt, objective): 'Repeat NMSE' / 'GT' / 'NMSE' / 'RELATIVE' / 'SUCCESS_TIMES'
+- Proximal (src/prox/)
+  - Abstract: ProximalOperator / GroupProximalOperator
+  - Separable: ProxL1, ProxL1over2, ProxL2over3, ProxL0, ProxMCP, ProxSCAD, ProxTransformedl1 (TL1), ProxCappedL1, ProxCapped1over2
+  - Group: ProxL1_1over2, ProxL1_2over3, GeneralProxL2Psi, L2_ψ series
+  - Container: ProximalContainer for DI and composition
+- Models (src/models/)
+  - Abstract: Model, GroupModel, JointModel
+  - Group: ISTA, FISTA, GROUPPGAC; Joint: JointISTA, JointFISTA, PGAC
+- Logging (src/report/reporter.py)
+  - Logger singleton: `Logger(**opts.log_config.model_dump()).logger`
+
+---
+
+### Reproducibility Pipeline
+1) Prepare environment (pin deps if needed)
+2) Choose script (demo / demo_l1over3 / group_* / joint_*)
+3) Configure Settings (K, tau, sparsity, gLen, data_seed, objective)
+4) Compose proximal families via ProximalContainer
+5) Run MSELossExperiment / SuccessRateExperiment
+6) Plot with figure_generater (optional)
+7) Inspect logs and figures (default `1.png`)
+
+---
+
+### Development & Contributing
+- Style: PEP8 + type hints; Pydantic v2 for config/models
+- Architecture: functional-first, modular; layered under src/ (common/dataset/experiment/models/prox/report)
+- Extensions:
+  - Proximals: add under prox/sep_prox/ or prox/group_prox/ per abstract interfaces; wire into ProximalContainer
+  - Models: add under models/block_models/ or models/joint_models/
+  - Experiments: implement under experiment/ and add entry in group_sparse_exp/ or joint_sparse_exp/
+- PRs: include change summary and minimal repro (commands, settings, logs/figures)
+- Issues: include env, settings, repro steps, and log snippets
+
+---
+
+### Version & Compatibility
+- Python: 3.10+ (recommended)
+- Deps: numpy / pandas / matplotlib / pydantic v2 / structlog / dependency-injector / munch
+- Notes: Nonconvex proximals (ℓ1/3, ℓ1/2, TL1, Cappedℓ1/2) are sensitive to thresholds and stability; tune tau with Lipschitz estimates when possible.
+
+---
+
+### License & Citation
+- License: If unspecified, assume research-only; seek authors’ permission for other uses.
+- Citation: Cite the authors and repository when using this codebase or proximal designs.
+
+---
+
+### Contact
+- Authors: Zhihong Li (gealachlee@126.com), Rongrong Lin (linrr@gdut.edu.cn)
+- Issues: Use repository Issues for questions and suggestions

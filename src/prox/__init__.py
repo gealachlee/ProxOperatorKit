@@ -1,10 +1,14 @@
 from abc import ABCMeta
+from typing import Optional
+
 import numpy as np
 
 __all__ = ['ProximalOperator', 'GroupProximalOperator']
 
 
 class ProximalOperator(metaclass=ABCMeta):
+    latex_name: Optional[str]  # the latex name of the proximal operator
+
     def calculate_subderivative(self, u: np.ndarray, *args, **kwargs) -> np.ndarray:
         raise NotImplementedError
 
@@ -24,13 +28,6 @@ class ProximalOperator(metaclass=ABCMeta):
         raise NotImplementedError
 
     @classmethod
-    def latex_name(cls):
-        """
-        :return: the latex name of the proximal operator
-        """
-        raise NotImplementedError
-
-    @classmethod
     def name(cls):
         return cls.__name__
 
@@ -46,7 +43,9 @@ class GroupProximalOperator(ProximalOperator):
     gLen: int  # the group length
     num_subvectors: int  # the number of subvectors
 
-    __slots__ = ('n', 'gLen', 'num_subvectors', 'num_samples')
+    latex_name: Optional[str]   # the latex name of the proximal operator
+
+    __slots__ = ('n', 'gLen', 'num_subvectors', 'num_samples', 'latex_name')
 
     @staticmethod
     def get_num_subvectors(n: int, gLen: int) -> int:

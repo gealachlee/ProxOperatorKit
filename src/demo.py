@@ -5,32 +5,28 @@
 @description: demo for the project, including the main function.
 @version: 4.0
 """
-from munch import DefaultMunch
 from common import SepSparsityType
-from config import init_log
+from common.config import Settings, JointSparseConfig, NoiseConfig, LogConfig
 from dataset.create_data import create_sc_dataset
-
-from loss import objective_val
+from experiment.experiment import MSELossExperiment
 from prox import ProximalOperator
 from prox.container import ProximalContainer
-import numpy as np
-from models import initialize_model
-from common.config import Settings, JointSparseConfig, NoiseConfig
+from report import Logger
 
 opts = Settings(
-    K=1000,
+    K=400,
     objective='Repeat NMSE',
-    tau=0.1,
+    tau=0.02,
     m=256,
     n=1024,
-    data_size=1,
+    data_size=16,
     dist='normal',
-    gLen=16,
+    gLen=1,
     data_seed=6,
-    logger=None,
-    sparsity=6,
+    sparsity=30,
     plot_figs=True,
-    noise_params=NoiseConfig(sig=0.01),
+    log_config=LogConfig(file_dir='./', file_name='demo.log', file_mode='w+'),
+    noise_params=NoiseConfig(sig=0.001),
     joint_sparse_config=JointSparseConfig(
         is_joint_sparse=False,
         mode=SepSparsityType.PERCENTAGE,
@@ -38,7 +34,7 @@ opts = Settings(
     )
 )
 
-init_log(opts)
+logger = Logger(**opts.log_config.model_dump()).logger
 
 container = ProximalContainer(
     n=opts.n,
@@ -62,7 +58,12 @@ mix_psi_prox_list: list[tuple[ProximalOperator, ProximalOperator]] = [
     (container.prox_l2over3(),container.prox_2_2over3())
 ]
 
-
+cl_prox_list :list= [
+    container.prox_l1(),
+    container.prox_cl1(),  # blue
+    container.prox_l1over2(), # red
+    container.prox_cl1over2() #  green
+]
 l2_psi_prox_list: list[ProximalOperator] = [
     container.prox_2_0(),
     container.prox_2_1(),
@@ -78,35 +79,39 @@ l2_psi_prox_list: list[ProximalOperator] = [
 ]
 
 model_prox_dict = {
-    'GROUPIMTC': l2_psi_prox_list,
+    'FISTA': cl_prox_list
     # 'IMTC': l1_psi_prox_list
 }
-
 (x_test, d_test), A, b = create_sc_dataset(opts=opts)
 
-def main(opts):
-    print('\nSparsity: {}\n'.format(opts.sparsity))
-    save_model = []
-    total_results = DefaultMunch()
+exp=MSELossExperiment()
 
-    for model_name, prox_func_list in model_prox_dict.items():
-        for prox_func in prox_func_list:
-            model = initialize_model(model_name=model_name, prox_func=prox_func, A=A, opts=opts)
-            desc = model_name + '_' + prox_func.name() if not isinstance(prox_func, tuple) else model_name + '_' + \
-                                              prox_func[0].name() + '_' + \
-                                                                                                prox_func[1].name()
-            opts.logger('Model: {}\n'.format(desc))
-            total_results.__setitem__(desc, [])
-            model(d_test, K=opts.K)
+total_results = exp.run(logger,opts, model_prox_dict)
 
-            save_model.append(model)
-            opts.logger('Testing losses:')
-            for k in range(0, opts.K):
-                test_loss = objective_val(model.iter_history[k], d_test, x_test, objective=opts.objective).item()
-                testing_loss = np.mean(test_loss)
-                total_results[desc].append(testing_loss)
-                opts.logger('Iteration: {}, Testing Loss: {}'.format(k, testing_loss))
-    return total_results
+#
+# #
+res= total_results.results
+import matplotlib.pyplot as plt
 
+#
+# from figure_generater.plot_config import PlotConfig
+# plot_cfg = PlotConfig(json_files='./figure_generater/plot_config_compare_exp.json')
+# plot_color=plot_cfg.plot_color
+# fig, (ax1) = plt.subplots(1, 1, figsize=(16, 6))
+# fig.subplots_adjust(hspace=0.5)  #
+# for index, record in enumerate(total_results.results):
+#     linestyle = '--' if 'Joint' in record.desc else '-'
+#     ax1.plot(record.metrics, color=plot_color[index], linestyle=linestyle)
+#     ax1.set_yscale('log')
+#     ax1.set_yticks([10 ** 0, 10 ** -1, 10 ** -2, 10 ** -3, 10 ** -4],
+#                    [r'$10^{0}$', r'$10^{-1}$', r'$10^{-2}$', r'$10^{-3}$', r'$10^{-4}$'])
+#
+# ax1.set_ylabel('Relative Error', fontdict={'fontsize': 12})
+# ax1.set_xlabel('Iteration', fontdict={'fontsize': 12})
+# plt.legend()
+# plt.savefig('1.png')
 
-total_results = main(opts)
+logger.info(f'{res[0].desc}--{res[0].metrics[-1]}')
+logger.info(f'{res[1].desc}--{res[1].metrics[-1]}')
+logger.info(f'{res[2].desc}--{res[2].metrics[-1]}')
+logger.info(f'{res[3].desc}--{res[3].metrics[-1]}')

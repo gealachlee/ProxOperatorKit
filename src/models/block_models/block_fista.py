@@ -6,24 +6,19 @@
 @version: 2.0
 """
 import numpy as np
-from models.base import Model
-from typing import Callable
+from models.base import Model, GroupModel
+from typing import Union
 
 __all__ = ['FISTA']
 
+from prox import GroupProximalOperator,ProximalOperator
 
-class FISTA(Model):
 
-    def __init__(self, A: np.ndarray, tau, prox_func: Callable):
-        super().__init__(A, tau)
-        self.m, self.n = self.A.shape
-        self.L_np = np.linalg.norm(np.matmul(A.transpose(), A), ord=2)
-        self.gamma = 1 / np.linalg.norm(A, 2) ** 2
-        self.prox_func: Callable = prox_func
+class FISTA(GroupModel):
+
+    def __init__(self, A: np.ndarray, tau, prox_func: Union[GroupProximalOperator,ProximalOperator]):
+        super().__init__(A, tau, prox_func)
         self.iter_history: list = []
-
-    def name(self):
-        return f'FISTA with {self.prox_func.name()}'
 
     def T(self, x, d, **kwargs):
         tau = kwargs.get('tau', self.tau)
@@ -34,7 +29,6 @@ class FISTA(Model):
         z = x - self.gamma * 2 * (self.A.T @ r.T).T
 
         Tx = self.prox_func(z, self.gamma * tau)
-        #  Tx = self.prox_func(Tx, self.gamma * tau)
 
         return Tx
 
@@ -61,12 +55,6 @@ class FISTA(Model):
             self.iter_history.append(xk)
         return xk
 
-    def model_name(self) -> str:
-        return 'FISTA'
-
     def proximal_operator_name(self) -> str:
-        print(self.prox_func.__name__)
         return self.prox_func.__name__
 
-    def __call__(self, *args, **kwargs):
-        return self.forward(*args, **kwargs)

@@ -5,6 +5,7 @@ from prox import ProximalOperator
 
 
 class ProxL1(ProximalOperator):
+    latex_name = r'$\ell_1$'
 
     @classmethod
     def prox(cls, x: np.ndarray, v, *args, **kwargs) -> np.ndarray:
@@ -17,10 +18,12 @@ class ProxL1(ProximalOperator):
     def __call__(self, *args, **kwargs):
         return super().__call__(*args, **kwargs)
 
-    def latex_name(cls):
-        return r'$\ell_1$'
+    # def latex_name(cls):
+    #     return r'$\ell_1$'
+
 
 class ProxL1over2(ProximalOperator):
+    latex_name = r'$\ell_{1/2}$'
 
     @classmethod
     def prox(cls, x: np.ndarray, v, *args, **kwargs) -> np.ndarray:
@@ -34,16 +37,16 @@ class ProxL1over2(ProximalOperator):
     def name(cls):
         return 'L1over2'
 
-    @classmethod
-    def latex_name(cls):
-        return r'$\ell_{1/2}$'
+    # @classmethod
+    # def latex_name(cls):
+    #     return r'$\ell_{1/2}$'
 
     def __call__(self, *args, **kwargs):
         return super().__call__(*args, **kwargs)
 
 
 class ProxL2over3(ProximalOperator):
-
+    latex_name = r'$\ell_{2/3}$'
     @classmethod
     def prox(cls, x: np.ndarray, v, *args, **kwargs) -> np.ndarray:
         x = np.where(
@@ -57,20 +60,20 @@ class ProxL2over3(ProximalOperator):
                            np.sqrt(2.0 * np.abs(x) / np.sqrt(2.0 * t) - 2 * t))) ** 3)
         return tao
 
-
     @classmethod
     def name(cls):
         return 'L2over3'
 
-    @classmethod
-    def latex_name(cls):
-        return r'$\ell_{2/3}$'
+    # @classmethod
+    # def latex_name(cls):
+    #     return r'$\ell_{2/3}$'
 
     def __call__(self, *args, **kwargs):
         return super().__call__(*args, **kwargs)
 
 
 class ProxL0(ProximalOperator):
+    latex_name = r'$\ell_{0}$'
 
     @classmethod
     def prox(cls, x: np.ndarray, v, *args, **kwargs) -> np.ndarray:
@@ -82,15 +85,16 @@ class ProxL0(ProximalOperator):
     def name(cls):
         return 'L0'
 
-    @classmethod
-    def latex_name(cls):
-        return r'$\ell_0$'
+    # @classmethod
+    # def latex_name(cls):
+    #     return r'$\ell_0$'
 
     def __call__(self, *args, **kwargs):
         return super().__call__(*args, **kwargs)
 
 
 class ProxArctan(ProximalOperator):
+    latex_name = r'${{\rm {Arctan}}$'
     """
     Related paper:
         [1] He Z, Shu Q, Wen J, et al. A Novel Iterative Thresholding Algorithm for Arctangent
@@ -122,18 +126,17 @@ class ProxArctan(ProximalOperator):
     def name(cls):
         return "arctan"
 
-    @classmethod
-    def latex_name(cls):
-        return r'${\rm{Arctan}}$'
+    # @classmethod
+    # def latex_name(cls):
+    #     return r'${\rm{Arctan}}$'
 
     @classmethod
     def __call__(self, *args, **kwargs):
         return super().__call__(*args, **kwargs)
 
 
-
-
 class ProxMCP(ProximalOperator):
+    latex_name = r'${\rm MCP}$'
     def __init__(self, fix_params):
         self.fix_params = fix_params
         assert fix_params > 1
@@ -160,6 +163,7 @@ class ProxMCP(ProximalOperator):
 
 
 class ProxSCAD(ProximalOperator):
+    latex_name =r'${\rm {SCAD}}$'
     def __init__(self, fix_param1, fix_param2):
         self.fix_param1 = fix_param1
         self.fix_param2 = fix_param2
@@ -180,12 +184,11 @@ class ProxSCAD(ProximalOperator):
         #                                     x)
         #                            ))
 
-
         return np.where(absx <= 2 * lamb,
                         np.maximum(np.sign(x) * (absx - lamb), 0),
                         np.where(absx <= self.fix_param2 * lamb,
                                  ((self.fix_param2 - 1) * absx - lamb * self.fix_param2) * np.sign(x) / (
-                                             self.fix_param2 - 2), x))
+                                         self.fix_param2 - 2), x))
         # return np.where(absx <= v * self.fix_param1,0,
         #                 np.where(
         #                     absx<=self.fix_param1*(v+1),
@@ -198,15 +201,13 @@ class ProxSCAD(ProximalOperator):
         #                 )
         #                 )
 
-
-
     @classmethod
     def name(cls):
         return 'SCAD'
 
-    @classmethod
-    def latex_name(cls):
-        return r'$\rm{SCAD}$'
+    # @classmethod
+    # def latex_name(cls):
+    #     return r'$\rm{SCAD}$'
 
     def calculate_subderivative(self, u, *args, **kwargs):
         """ for u>0
@@ -222,6 +223,8 @@ class ProxSCAD(ProximalOperator):
 
 
 class ProxTransformedl1(ProximalOperator):
+
+    latex_name= r'${\rm{TL1}}$'
     def __init__(self, fix_param1):
         self.a = fix_param1
 
@@ -246,7 +249,6 @@ class ProxTransformedl1(ProximalOperator):
     def name(cls):
         return 'Tl1'
 
-
     def calculate_subderivative(self, u: np.ndarray, *args, **kwargs) -> np.ndarray:
         """ u>0
         :param u:
@@ -257,12 +259,12 @@ class ProxTransformedl1(ProximalOperator):
         a = self.a
         return (a + 1) * a / ((u + a) ** 2)
 
-    @classmethod
-    def latex_name(cls):
-        return '${\rm{TL1}}$'
+    # @classmethod
+    # def
 
 
 class ProxCappedL1(ProximalOperator):
+    latex_name = r'$\rm{CL1}$'
     def __init__(self, fix_param):
         self.fix_param = fix_param
         assert fix_param > 0
@@ -279,9 +281,7 @@ class ProxCappedL1(ProximalOperator):
     def name(cls):
         return 'CappedL1'
 
-    @classmethod
-    def latex_name(cls):
-        return r'$\rm{CL1}$'
+
 
 
 def proxl0(x, lamb) -> np.ndarray:
@@ -289,6 +289,7 @@ def proxl0(x, lamb) -> np.ndarray:
 
 
 class ProxCapped1over2(ProximalOperator):
+    latex_name = r'$\rm{CL1/2}$'
     p: float = 0.5
 
     def __init__(self, fixparam: float):
@@ -367,7 +368,5 @@ class ProxCapped1over2(ProximalOperator):
     def name(cls):
         return 'CappedL1over2'
 
-    @classmethod
-    def latex_name(cls):
-        return r'$\rm{CL1/2}$'
+
 

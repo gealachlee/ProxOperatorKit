@@ -224,6 +224,7 @@ __all__ = [
 
 
 class ProxL1_1over2(GroupProximalOperator):
+    latex_name = r'$L_{1,{\rm {1/2}}}$'
     """
     Standard implementation of the proximal operator for the \ell_{1,\frac{1}{2}}.
     Ralated Article:
@@ -341,12 +342,14 @@ class ProxL1_2over3(GroupProximalOperator):
     [1] Lin R, Chen S, Feng H, et al. Computing the Proximal Operator of the $\ell_ {1, q} $-norm for Group Sparsity[J]. arXiv preprint arXiv:2409.14156, 2024.
 
     """
+    latex_name = r'$L_{1,{\rm {2/3}}}$'
 
     def __init__(self, n: int, gLen: int, num_samples: int = 1):
         self.n: int = n
         self.gLen: int = gLen
         self.num_subvectors: int = self.get_num_subvectors(n, gLen)
         self.num_samples: int = num_samples
+
 
     @classmethod
     def obj(cls, x: np.ndarray, xtilde: np.ndarray, nu: T) -> np.ndarray:

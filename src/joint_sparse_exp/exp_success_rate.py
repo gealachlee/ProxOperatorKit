@@ -1,80 +1,60 @@
-import pandas as pd
-from munch import DefaultMunch
-from munch import Munch
+from common.config import Settings, JointSparseConfig, NoiseConfig, LogConfig
+from common.enum import  SepSparsityType
+from prox import ProximalOperator
+from prox.group_prox.general import GeneralProxL2Psi
+from prox.container import ProximalContainer
+from report import Logger
+from experiment.experiment import SuccessRateExperiment
+from figure_generater.plot_config import PlotConfig
 
-from common import JointSparseConfig
-from common.enum import SepSparsityType
-from config import NoiseParams
-from config import init_log
-from dataset.create_data import create_sc_dataset
-from loss import objective_val
-from models import BlockModelFactory
-from prox.group_prox import ProxL1_1over2, ProxL1_2over3
-from prox.group_prox.l1psi import *
-from prox.group_prox.l2psi.prox_cl import *
-from prox.sep_prox.prox_cl import *
-from report import init_settings
 
-success_rate_exp_opts = DefaultMunch(
+opts = Settings(
     K=1000,  # Total Iterations
-    objective='Repeat NMSE',
-    tau=0.1,  # 0.5  # 'Parameter for reg. term in the objective function'
+    objective='SUCCESS_TIMES',
+    tau=0.05,  # 0.5  # 'Parameter for reg. term in the objective function'
     m=256,  # 'Number of rows in matrix A'
     n=1024,  # 'Number of cols in matrix A'
     data_size=64,  # 'Number of num_samples'
     dist='normal',  # 'Distribution of entries in the matrix A'
-    sparsity=8,  # 8  # 'Sparsity' # 非零组数
+    sparsity=1,
     gLen=8,  # 16  # 'Length of each group
-    data_seed=None,  # 'Seed for generating data'
-    logger=None,
+    data_seed=1,  # 'Seed for generating data'
+    log_config=LogConfig(file_dir='./',file_name='success_rate_exp.log',is_debug=True),
     plot_figs=True,
-    noise_params=NoiseParams(),
-    algorithm='GROUPIMTC',
-    repeat_times=1,
+    noise_params=NoiseConfig(sig=0.001),
     joint_sparse_config=JointSparseConfig(is_joint_sparse=True, mode=SepSparsityType.PERCENTAGE, p=0.5),
-    dynamic_settings= [Munch.fromDict({'sparsity': i}) for i in range(16, 31)]
 )
-success_rate_exp_opts.sep_rate = int(10 * success_rate_exp_opts.joint_sparse_config.p)
-success_rate_exp_opts.save_dir = f'./exp/success_rate/{success_rate_exp_opts.joint_sparse_config.mode.value}/'
 
-opts = success_rate_exp_opts
 
-init_log(opts)
-reporter = init_settings(opts, None)
+logger = Logger(**opts.log_config.model_dump()).logger
 
-def run():
-    for persettings in opts.dynamic_settings:
-        success_times = 0
-        opts.sparsity = persettings.sparsity
-        opts.logger('\nUsing sparsity: {}\n'.format(opts.sparsity))
-       # for repeat_times in range(1, opts.repeat_times + 1):
-            # Create data
-        (x_test, d_test), A, b = create_sc_dataset(opts=opts)
-        gamma = 1 / np.linalg.norm(A, 2) ** 2
-        prox_func = ProxL1_1over2(opts.n, opts.gLen)
+container = ProximalContainer(
+    n=opts.n,
+    gLen=opts.gLen,
+    data_size=opts.data_size
 
-        desc = opts.algorithm + '_' + prox_func.name()
-        opts.logger('\n Running {} with {}...\n'.format(opts.algorithm, prox_func.name()))
+)
 
-            # Create model
-        model = BlockModelFactory().create_model(
-                model_name=opts.algorithm, A=A, prox_func=prox_func, tau=opts.tau)
-        model(d_test, K=opts.K)
+l1_psi_prox_list: list[ProximalOperator] = [
+    container.prox_1_1over2(),
+    container.prox_1_2over3(),
+    container.prox_1_mcp(),
+    container.prox_1_scad(),
+    container.prox_1_tl1()
+]
 
-        loss = objective_val(model.iter_history[-1], d_test, x_test, objective='SUCCESS_TIMES')
-        opts.logger('Iteration: {}, Testing Loss: {}'.format(opts.K, loss))
-           # if loss < 0.005:
-            #     success_times += 1
-        df = pd.DataFrame([model.iter_history[-1].reshape(-1).T, x_test.reshape(-1).T]).T
-        df.columns = ['x_pred', 'x_gt']
-            # save_df(df, opts.save_dir + f'/sparsity{opts.sparsity}_repeat{repeat_times}.xlsx',
-            #         f"{desc}_{opts.sparsity}_{repeat_times}")
-        setattr(opts, f'sparsity_{opts.sparsity}_success_times', success_times)
-        setattr(opts, f'sparsity_{opts.sparsity}_success_rate', success_times / opts.repeat_times)
-        reporter.save_inf(f'\n\nSparse Level --> {opts.sparsity / (opts.n / opts.gLen)}\n\n')
-        reporter.save_inf(f'sparsity_{opts.sparsity}_success_times{success_times}')
-        reporter.save_inf(f'sparsity_{opts.sparsity}_success_rate{success_times / opts.repeat_times}')
-        reporter.save_inf(f'\n\nFinish -sparsity-{opts.sparsity}-repeat-{opts.repeat_times}\n\n')
 
-run()
+plot_cfg = PlotConfig('../figure_generater/plot_config_compare_exp.json')
 
+
+if __name__ == '__main__':
+    exp= SuccessRateExperiment()
+    result=exp.run(
+        logger, opts,
+            model_prox_dict=
+            {'GROUPPGAC':
+            [container.prox_1_1over2()]
+             },
+    sparsity_scope=list(range(11,15)),model_name='GROUPPGAC'
+    )
+    exp.plot(plot_cfg, result)

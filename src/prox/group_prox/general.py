@@ -80,7 +80,7 @@ class L1_SubvecProx(metaclass=ABCMeta):
                 sorted_indices = np.argsort(indices)
                 s_list = [self.zeros]
                 s_list.extend(self._loop_search_s(y, v, con4))
-                if len(s_list)>1:
+                if len(s_list) > 1:
                     s_list.pop(0)
                     Js_list = [self.obj(y, per_ytilde, v) for per_ytilde in s_list]
                 else:
@@ -124,15 +124,16 @@ class GeneralProxL1Psi(GroupProximalOperator):
         self.subvec_prox: L1_SubvecProx = subvec_prox
         self.num_samples: int = num_samples
 
+        self.latex_name = fr'$L_{{1,{{\rm {self.subvec_prox.name()}}}}}$'
+
     def prox(self, x: np.ndarray, v, *args, **kwargs) -> np.ndarray:
         x_subvectors = self._split_vectors(x)
         subvec_prox = self.subvec_prox
 
-
         # res = np.apply_along_axis(np.count_nonzero, 2, lp) #计算l0范数
 
         # print(res)
-        return self._concentrate_vectors([subvec_prox.prox(x_sub,v) for x_sub in x_subvectors]).reshape(
+        return self._concentrate_vectors([subvec_prox.prox(x_sub, v) for x_sub in x_subvectors]).reshape(
             self.num_samples, -1)
         # return self._concentrate_vectors(
         #     [subvec_prox.prox(x_sub, r) for r, x_sub in zip(v, x_subvectors)]).reshape(
@@ -171,6 +172,7 @@ class GeneralProxL2Psi(GroupProximalOperator):
         self.num_subvectors: int = self.get_num_subvectors(n, gLen)
         self.subvec_prox: ProximalOperator = subvec_prox
 
+        self.latex_name = fr'$L_{{2,{{\rm {self.subvec_prox.name()}}}}}$'
 
     def prox(self, x: np.ndarray, v, *args, **kwargs) -> np.ndarray:
         x_subvectors = self._split_vectors(x)

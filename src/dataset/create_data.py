@@ -5,33 +5,33 @@
 @description: Create data for Group Sparse.
 @version: 2.0
 """
-import numpy as np
 
-from common.enum import SepSparsityType
 from functools import lru_cache
-
-import numpy as np
 from numpy.typing import NDArray
 from sklearn.preprocessing import normalize
+from common.enum import SepSparsityType
+import numpy as np
 
-
-def generat_sensing_mat(m, n):
+def generate_sensing_mat(m, n):
     A = np.random.normal(size=(m, n))
     return normalize(A, norm='l2', axis=0)
 
-
+# 生成一个 4x8 的高斯随机矩阵 A
+A = np.random.randn(256, 1024)
+from  scipy.linalg  import orth
+# 使用 scipy.linalg.orth 对矩阵 A 进行正交化
+Q = orth(A.T).T #默认是列正交化
 # 类型别名
 FloatArray = NDArray[np.floating]
 IntArray = NDArray[np.integer]
 
 
 class SensingMatrixGenerator:
-    """感知矩阵生成器"""
 
     @staticmethod
     @lru_cache(maxsize=128)
     def get_cached_matrix(m: int, n: int) -> FloatArray:
-        return generat_sensing_mat(m, n)
+        return generate_sensing_mat(m, n)
 
 
 class NoiseGenerator:

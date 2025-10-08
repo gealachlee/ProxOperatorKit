@@ -9,16 +9,18 @@ from typing import Callable
 
 import numpy as np
 
-from models.base import Model
+from models.base import Model, GroupModel
+from prox import GroupProximalOperator,ProximalOperator
+from typing import  Union
 
 
-class ISTA(Model):
+class ISTA(GroupModel):
 
-    def __init__(self, A: np.ndarray, tau, prox_func: Callable):
-        super().__init__(A, tau)
+    def __init__(self, A: np.ndarray, tau, prox_func: Union[GroupProximalOperator,ProximalOperator]):
+        super().__init__(A, tau, prox_func)
         self.m, self.n = self.A.shape
         self.L_np = np.linalg.norm(np.matmul(A.transpose(), A), ord=2)
-        self.gamma = 1 / np.linalg.norm(A, 2) ** 2
+        self.gamma = 1 / np.linalg.norm(A, 2) ** 2 # 步长
         self.prox_func: Callable = prox_func
         self.iter_history: list = []
 
@@ -47,12 +49,8 @@ class ISTA(Model):
             self.iter_history.append(xk)
         return xk
 
-    def model_name(self) -> str:
-        return 'ISTA'
 
     def proximal_operator_name(self) -> str:
-        print(self.prox_func.__name__)
         return self.prox_func.__name__
 
-    def __call__(self, *args, **kwargs):
-        return self.forward(*args, **kwargs)
+

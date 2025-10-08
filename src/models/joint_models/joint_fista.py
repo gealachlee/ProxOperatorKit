@@ -19,8 +19,8 @@ class JointFISTA(Model):
         super().__init__(A, tau)
         self.m, self.n = self.A.shape
         self.L_np = np.linalg.norm(np.matmul(A.transpose(), A), ord=2)
-        self.gamma1 = 1 / np.linalg.norm(A, 2) ** 2
-        self.gamma2 = 1 - self.gamma1
+        self.gamma1 = 0.05* (1 / np.linalg.norm(A, 2) ** 2)
+        self.gamma2 = 0.95*(1 - self.gamma1)
         self.prox_func1: ProximalOperator = prox_func1
         self.prox_func2: GroupProximalOperator = prox_func2
         self.iter_history: list = []
@@ -34,12 +34,10 @@ class JointFISTA(Model):
         assert index >= 0
 
         r = (self.A @ x.T).T - d
-        # z = x - self.gamma1 * 2 * (self.A.T @ r.T).T
+
         z = x - self.gamma1 * 2 * (self.A.T @ r.T).T
-        z = self.prox_func1(z, 0.05* self.gamma1 * tau)  # 0.001*self.gamma2 * tau)
-        Tx = self.prox_func2(z, 0.95 * self.gamma1 * tau)  # self.gamma1 * tau)  # new
-        # z = self.prox_func1(z,self.gamma1 * tau)
-        # Tx = self.prox_func2(z, self.gamma1 * tau)  # new
+        z = self.prox_func1(z,self.gamma1 * tau)
+        Tx = self.prox_func2(z, self.gamma1 * tau)
         return Tx
 
     def forward(self, d, **kwargs) -> np.ndarray:
@@ -50,12 +48,10 @@ class JointFISTA(Model):
         tk = t_next = 1.0
 
         for i in range(K):
-            # Process momentum
 
             x_next = self.T(z, d, index=i)
             t_next = 0.5 + np.sqrt(1.0 + 4.0 * tk ** 2) / 2.0
             z_next = xk + ((tk - 1.0) / t_next) * (x_next - xk)
-            # print((tk -1.0)/t_next)
 
             # Process iteration
             xk = x_next
@@ -65,12 +61,3 @@ class JointFISTA(Model):
             self.iter_history.append(xk)
         return xk
 
-    def model_name(self) -> str:
-        return 'JointFISTA'
-
-    def proximal_operator_name(self) -> str:
-        print(self.prox_func.__name__)
-        return self.prox_func.__name__
-
-    def __call__(self, *args, **kwargs):
-        return self.forward(*args, **kwargs)

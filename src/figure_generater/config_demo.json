@@ -1,0 +1,25 @@
+{
+  "plot_width": 1200,
+  "plot_height": 800,
+  "font_size": 14,
+  "color":  [
+    "b",
+    "r",
+    "g",
+    "c",
+    "m",
+    "y",
+    "k",
+    "#FFA500",
+    "#800080",
+    "#FFD700",
+    "#00FF7F",
+    "#FF4500",
+    "#1E90FF",
+    "#8A2BE2",
+    "#FF1493"
+  ],
+  "is_save": true,
+  "save_dir": "../",
+  "file_name": "save.png"
+}

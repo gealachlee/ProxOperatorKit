@@ -1,10 +1,9 @@
 from enum import Enum
 from pathlib import Path
-from typing import Optional, Dict, Any, List
 from pydantic import BaseModel, Field, validator, field_validator
 from pydantic_settings import BaseSettings
 
-__all__ = ["Settings"]
+__all__ = ["Settings", "DistributionType", "ObjectiveType", "SeparableSparsityMode", "NoiseConfig", "JointSparseConfig", "LogConfig"]
 
 
 class DistributionType(str, Enum):
@@ -46,47 +45,11 @@ class JointSparseConfig(BaseModel):
     p: float = Field(default=0.5, ge=0.0, le=1.0, description="Alias for probability, for backward compatibility")
 
 
-# class LoggingConfig(BaseModel):
-#     """Configuration for logging system."""
-#     level: str = Field(default="INFO", description="Logging level")
-#     format: str = Field(default="json", description="Log format (json/text)")
-#     file_path: Optional[Path] = Field(default=None, description="Log file path")
-#     console_output: bool = Field(default=True, description="Enable console output")
-#     logger: Optional[Any] = Field(default=None, description="Logger instance, for backward compatibility")
-
-    # def init_log(self, opts: Any) -> None:
-    #     """Initialize logger based on configuration."""
-    #     if not self.file_path:
-    #         self.file_path = Path("output/output.log")
-    #     if not self.file_path.parent.exists():
-    #         self.file_path.parent.mkdir(parents=True)
-    #     self.logger = utils.setup_logger(str(self.file_path))
-    #     self.logger(f"Checkpoints will be saved to directory `{self.file_path.parent}`")
-    #     self.logger(f"Log file for training will be saved to file `{self.file_path}`")
-    #     self.logger(f"Using tau: {opts.tau}")
-
-#
-# class ExperimentConfig(BaseModel):
-#     """Configuration for experiment execution."""
-#     name: str = Field(description="Experiment name")
-#     description: Optional[str] = Field(default=None, description="Experiment description")
-#     output_dir: Path = Field(default=Path("output"), description="Output directory")
-#     save_plots: bool = Field(default=True, description="Save generated plots")
-#     save_results: bool = Field(default=True, description="Save experiment results")
-#     parallel_execution: bool = Field(default=False, description="Enable parallel execution")
-#     max_workers: Optional[int] = Field(default=None, description="Maximum number of workers")
-#     save_dir: Path = Field(default=Path("output"), description="Alias for output_dir, for backward compatibility")
-
-
-#
-# class ModelConfig(BaseModel):
-#     """Configuration for optimization models."""
-#     algorithms: List[str] = Field(default=["FISTA", "ISTA"], description="Algorithms to use")
-#     proximal_operators: List[str] = Field(default=["ProxL2_1", "ProxL2_2over3"],
-#                                           description="Proximal operators to use")
-#     custom_params: Dict[str, Any] = Field(default_factory=dict, description="Custom model parameters")
-#     algorithm: str = Field(default="FISTA", description="Alias for algorithms[0], for backward compatibility")
-#
+class LogConfig(BaseModel):
+    file_dir:Path = Field(default=Path('./'),description='Logging path')
+    file_name: str = Field(default='experiment.log', description='Logging file name')
+    is_debug:bool = Field(default=True,description='Configurations for generate output file or not')
+    
 
 class Settings(BaseSettings):
     """Main application settings with environment variable support."""
@@ -103,11 +66,11 @@ class Settings(BaseSettings):
     gLen: int = Field(default=16, gt=0, description="Length of each group")
     dist: str = Field(default="normal", description="Distribution of entries in the matrix A")
     data_seed: int = Field(default=6, description="Random seed for data generation")
-    save_dir: Path = Field(default=Path("output"), description="Output directory")
+    save_dir: Path = Field(default_factory=Path, description="Output directory")
     plot_figs: bool = Field(default=True, description="Save generated plots")
     objective: str = Field(default="Repeat NMSE", description="Loss function")
-    logger: Optional[Any] = Field(default=None, description="Logger instance")
-
+    log_config: LogConfig = Field(default_factory=LogConfig,
+                                  description="Logging configurations")
     # Nested configurations (aligned with ExpContainer)
     noise_params: NoiseConfig = Field(default_factory=NoiseConfig, description="Noise parameters")
     joint_sparse_config: JointSparseConfig = Field(default_factory=JointSparseConfig,

@@ -1,9 +1,10 @@
-
 from prox import GroupProximalOperator
 from prox.sep_prox.prox_cl import *
 
 
 class ProxL2_0(GroupProximalOperator):
+    latex_name = r'$L_{2,|·|_0}$'
+
     def __init__(self, n: int, gLen: int):
         self.n: int = n
         self.gLen: int = gLen
@@ -34,6 +35,8 @@ class ProxL2_0(GroupProximalOperator):
 
 # Group proximal operators
 class ProxL2_1(GroupProximalOperator):
+    latex_name = r'$L_{2,|\cdot|}$'
+
     def __init__(self, n: int, gLen: int):
         self.n: int = n
         self.gLen: int = gLen
@@ -63,6 +66,8 @@ class ProxL2_1(GroupProximalOperator):
 
 
 class ProxL2_2over3(GroupProximalOperator):
+    latex_name = r'$L_{2,|\cdot|^{2/3}}$'
+
     def __init__(self, n: int, gLen: int):
         self.n = n
         self.gLen = gLen
@@ -98,6 +103,8 @@ class ProxL2_2over3(GroupProximalOperator):
 
 
 class ProxL2_1over2(GroupProximalOperator):
+    latex_name = r'$L_{2,|\cdot|^{1/2}}$'
+
     def __init__(self, n: int, gLen: int):
         self.n: int = n
         self.gLen: int = gLen
@@ -134,6 +141,8 @@ class ProxL2_1over2(GroupProximalOperator):
 
 
 class ProxL2_Arctan(GroupProximalOperator):
+    latex_name = r'$L_{2,{\rm Arctan}}$'
+
     def __init__(self, n: int, gLen: int, c: float):
         self.n: int = n
         self.gLen: int = gLen
@@ -165,6 +174,8 @@ class ProxL2_Arctan(GroupProximalOperator):
 
 
 class ProxL2_CappedL1over2(GroupProximalOperator):
+    latex_name: str = r'$L_{2,{\rm CL1/2}}$'
+
     def __init__(self, n: int, gLen: int, gamma: float):
         super().__init__()
         self.n: int = n
@@ -220,6 +231,8 @@ class ProxL2_CappedL1over2(GroupProximalOperator):
 
 
 class ProxL2_LogSum(GroupProximalOperator):
+    latex_name = r'$L_{2,{\rm LOG}}$'
+
     def __init__(self, n: int, gLen: int, epsilon):
         super().__init__()
         self.n: int = n

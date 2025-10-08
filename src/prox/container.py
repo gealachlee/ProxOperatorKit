@@ -1,4 +1,5 @@
 from prox.group_prox import ProxL1_1over2, ProxL1_2over3
+from prox.group_prox.general import GeneralProxL1Psi, GeneralProxL2Psi
 from prox.group_prox.l1psi import *
 from prox.group_prox.l2psi import *
 from prox.sep_prox.prox_cl import *
@@ -28,13 +29,16 @@ class ProximalContainer(containers.DeclarativeContainer):
     prox_1_1over2 = providers.Factory(
         ProxL1_1over2,
         n=n,
-        gLen=gLen
+        gLen=gLen,
+        num_samples=data_size
+
     )
 
     prox_1_2over3 = providers.Factory(
         ProxL1_2over3,
         n=n,
-        gLen=gLen
+        gLen=gLen,
+        num_samples=data_size
     )
 
     prox_1_scad = providers.Factory(
@@ -46,7 +50,7 @@ class ProximalContainer(containers.DeclarativeContainer):
             gLen=gLen,
             lamb=0,
             fix_param1=1,
-            fix_param2=3.7,
+            fix_param2=8,
             precompute=precompute
         ),
         num_samples=data_size
@@ -74,7 +78,7 @@ class ProximalContainer(containers.DeclarativeContainer):
             L1_Transformed,
             gLen=gLen,
             lamb=0,
-            fix_param=4,
+            fix_param=2,
             precompute=precompute
         ),
         num_samples=data_size
@@ -132,3 +136,4 @@ class ProximalContainer(containers.DeclarativeContainer):
     prox_2_CL1over2 = providers.Factory(
         GeneralProxL2Psi, n=n, gLen=gLen, subvec_prox=prox_cl1over2
     )
+

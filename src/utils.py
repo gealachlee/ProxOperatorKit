@@ -16,18 +16,6 @@ from common import SepSparsityType
 
 
 
-def setup_logger(log_file):
-    if log_file is not None:
-        logging.basicConfig(filename=log_file, level=logging.INFO)
-        lgr = logging.getLogger()
-        lgr.addHandler(logging.StreamHandler())
-        lgr = lgr.info
-    else:
-        lgr = print
-
-    return lgr
-
-
 def save_df(df: pd.DataFrame, path: str, filename: str):
     return df.to_excel(path + filename + '.xlsx', index=False)
 

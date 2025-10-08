@@ -1,11 +1,7 @@
-
-
-
-import matplotlib.pyplot as plt
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('TkAgg')
-
+#
 plot_color = [
     "b",  # 蓝色
     "r",  # 红色
@@ -24,34 +20,9 @@ plot_color = [
     "#FF1493"  # 深粉色
 ]
 
-fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(16, 6))
-fig.subplots_adjust(hspace=0.5)  #
-for index, (name, loss) in enumerate(total_results1.items()):
-    linestyle = '--' if 'Joint' in name else '-'
-    ax1.plot(loss, color=plot_color[index], label=name_list[index], linestyle=linestyle)
-    ax1.set_yscale('log')
-    ax1.set_yticks([10 ** 0, 10 ** -1, 10 ** -2, 10 ** -3, 10 ** -4, 10 ** -5,10**-6,10**-7],
-                   [r'$10^{0}$', r'$10^{-1}$', r'$10^{-2}$', r'$10^{-3}$', r'$10^{-4}$', r'$10^{-5}$',r'$10^{-6}$',r'$10^{-7}$'])
 
-ax1.set_ylabel('Relative Error',fontdict={'fontsize': 12})
-ax1.set_xlabel('Iteration',fontdict={'fontsize': 12})
+# if opts.save_dir is not None:
+#     plt.savefig(opts.save_dir + f'/{filename}.png', dpi=400)
+# plt.show()
 
 
-for index, (name, loss) in enumerate(total_results2.items()):
-    linestyle = '--' if 'Joint' in name else '-'
-    ax2.plot(loss, color=plot_color[index], label=name_list[index], linestyle=linestyle)
-    ax2.set_yscale('log')
-    ax2.set_yticks([10 ** 0, 10 ** -1, 10 ** -2, 10 ** -3, 10 ** -4,10**-5,10**-6,10**-7],
-               [r'$10^{0}$', r'$10^{-1}$', r'$10^{-2}$', r'$10^{-3}$', r'$10^{-4}$', r'$10^{-5}$',r'$10^{-6}$',r'$10^{-7}$'])
-ax2.set_ylabel('Relative Error',fontdict={'fontsize': 12})
-ax2.set_xlabel('Iteration',fontdict={'fontsize': 12})
-lines, labels = ax1.get_legend_handles_labels()
-lines2, labels2 = ax2.get_legend_handles_labels()
-fig.legend(lines, labels, loc='upper center', bbox_to_anchor=(0.52, 0.97), ncol=9,fontsize=12)
-
-# 显示图形
-plt.tight_layout(rect=[0, 0, 1, 0.9])
-
-if opts.save_dir is not None:
-    plt.savefig(opts.save_dir + f'/{filename}.png', dpi=400)
-plt.show()
