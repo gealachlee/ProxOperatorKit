@@ -140,8 +140,8 @@ history/Glen8/
 history/history/
 
 # Rules
-rules/
-codebuddy/
+.rules/
+.codebuddy/
 
 # IDE files
 .idea/
