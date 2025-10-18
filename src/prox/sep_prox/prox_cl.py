@@ -1,32 +1,104 @@
+"""Proximal operators for various sparsity-inducing penalty functions.
+
+This module implements separable proximal operators for different penalty functions
+including L1, L0, MCP, SCAD, Lp (p=1/2, 2/3), arctan, and capped penalties used in sparse optimization.
+
+The proximal operators implement the Moreau-Yosida regularization of non-smooth penalty functions,
+enabling efficient optimization algorithms like ISTA, FISTA, and proximal gradient methods.
+
+References:
+    [1] Parikh, N., & Boyd, S. (2014). Proximal algorithms. Foundations and Trends in Optimization, 1(3), 127-239.
+    [2] Beck, A., & Teboulle, M. (2009). A fast iterative shrinkage-thresholding algorithm for linear inverse problems.
+        SIAM Journal on Imaging Sciences, 2(1), 183-202.
+    [3] Zhang, C. H. (2010). Nearly unbiased variable selection under minimax concave penalty.
+        The Annals of Statistics, 38(2), 894-942.
+    [4] Fan, J., & Li, R. (2001). Variable selection via nonconcave penalized likelihood and its oracle properties.
+        Journal of the American Statistical Association, 96(456), 1348-1360.
+"""
+
 import numpy as np
 from collections import namedtuple
+from typing import Any, Union
 
 from prox import ProximalOperator
 
 
 class ProxL1(ProximalOperator):
+    """L1-norm proximal operator (soft-thresholding operator).
+    
+    Implements the proximal operator for the L1-norm penalty, which performs
+    soft-thresholding on the input vector. This is the most commonly used proximal
+    operator in sparse optimization and compressed sensing.
+    
+    The proximal operator is defined as:
+        prox_{λ||·||₁}(x) = sign(x) · max(|x| - λ, 0)
+    
+    This operator shrinks each coefficient towards zero by the threshold λ,
+    setting small coefficients exactly to zero.
+    """
     latex_name = r'$\ell_1$'
 
     @classmethod
-    def prox(cls, x: np.ndarray, v, *args, **kwargs) -> np.ndarray:
+    def prox(cls, x: np.ndarray, v: float, *args: Any, **kwargs: Any) -> np.ndarray:
+        """Compute the L1 proximal operator (soft-thresholding).
+        
+        Args:
+            x: Input vector or array
+            v: Regularization parameter λ (threshold value)
+            *args: Additional positional arguments
+            **kwargs: Additional keyword arguments
+            
+        Returns:
+            Thresholded vector where each element is soft-thresholded by λ
+        """
         return np.sign(x) * np.maximum(np.abs(x) - v, 0)
 
     @classmethod
-    def name(cls):
+    def name(cls) -> str:
+        """Get the name of the proximal operator.
+        
+        Returns:
+            String identifier 'L1'
+        """
         return 'L1'
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> np.ndarray:
+        """Make the instance callable.
+        
+        Args:
+            *args: Positional arguments passed to prox method
+            **kwargs: Keyword arguments passed to prox method
+            
+        Returns:
+            Result of the proximal operation
+        """
         return super().__call__(*args, **kwargs)
-
-    # def latex_name(cls):
-    #     return r'$\ell_1$'
 
 
 class ProxL1over2(ProximalOperator):
+    """L1/2-norm proximal operator (half-thresholding operator).
+    
+    Implements the proximal operator for the L1/2-norm penalty, which provides
+    a compromise between L0 and L1 penalties. The L1/2 penalty has better sparsity
+    properties than L1 while being computationally more tractable than L0.
+    
+    The proximal operator uses a closed-form solution based on trigonometric functions.
+    """
     latex_name = r'$\ell_{1/2}$'
 
     @classmethod
-    def prox(cls, x: np.ndarray, v, *args, **kwargs) -> np.ndarray:
+    def prox(cls, x: np.ndarray, v: float, *args: Any, **kwargs: Any) -> np.ndarray:
+        """Compute the L1/2 proximal operator (half-thresholding).
+        
+        Args:
+            x: Input vector or array
+            v: Regularization parameter λ
+            *args: Additional positional arguments
+            **kwargs: Additional keyword arguments
+            
+        Returns:
+            Thresholded vector using the L1/2 proximal operator
+        """
         condition = 1.5 * v ** (2.0 / 3.0)
         absx = np.abs(x)
         return np.where(absx <= condition, 0.0,
@@ -34,21 +106,51 @@ class ProxL1over2(ProximalOperator):
                             (-(3 ** 1.5) / 4) * v * (absx ** -1.5)))))
 
     @classmethod
-    def name(cls):
+    def name(cls) -> str:
+        """Get the name of the proximal operator.
+        
+        Returns:
+            String identifier 'L1over2'
+        """
         return 'L1over2'
 
-    # @classmethod
-    # def latex_name(cls):
-    #     return r'$\ell_{1/2}$'
-
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> np.ndarray:
+        """Make the instance callable.
+        
+        Args:
+            *args: Positional arguments passed to prox method
+            **kwargs: Keyword arguments passed to prox method
+            
+        Returns:
+            Result of the proximal operation
+        """
         return super().__call__(*args, **kwargs)
 
 
 class ProxL2over3(ProximalOperator):
+    """L2/3-norm proximal operator.
+    
+    Implements the proximal operator for the L2/3-norm penalty, which provides
+    a non-convex regularization that can achieve better sparsity than L1 penalty
+    while being computationally tractable.
+    
+    The proximal operator uses a closed-form solution based on cubic root calculations.
+    """
     latex_name = r'$\ell_{2/3}$'
+    
     @classmethod
-    def prox(cls, x: np.ndarray, v, *args, **kwargs) -> np.ndarray:
+    def prox(cls, x: np.ndarray, v: float, *args: Any, **kwargs: Any) -> np.ndarray:
+        """Compute the L2/3 proximal operator.
+        
+        Args:
+            x: Input vector or array
+            v: Regularization parameter λ
+            *args: Additional positional arguments
+            **kwargs: Additional keyword arguments
+            
+        Returns:
+            Thresholded vector using the L2/3 proximal operator
+        """
         x = np.where(
             (x ** 4 / 256 - (8 * (v ** 3) / 729)) <= 0,
             np.sqrt(np.sqrt(8 * 256 * (v ** 3) / 729)),
@@ -61,35 +163,76 @@ class ProxL2over3(ProximalOperator):
         return tao
 
     @classmethod
-    def name(cls):
+    def name(cls) -> str:
+        """Get the name of the proximal operator.
+        
+        Returns:
+            String identifier 'L2over3'
+        """
         return 'L2over3'
 
-    # @classmethod
-    # def latex_name(cls):
-    #     return r'$\ell_{2/3}$'
-
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> np.ndarray:
+        """Make the instance callable.
+        
+        Args:
+            *args: Positional arguments passed to prox method
+            **kwargs: Keyword arguments passed to prox method
+            
+        Returns:
+            Result of the proximal operation
+        """
         return super().__call__(*args, **kwargs)
 
 
 class ProxL0(ProximalOperator):
+    """L0-norm proximal operator (hard-thresholding operator).
+    
+    Implements the proximal operator for the L0-norm penalty, which performs
+    hard-thresholding on the input vector. The L0 penalty counts the number of
+    non-zero elements and is the ideal sparsity-inducing penalty, but it is
+    non-convex and computationally challenging.
+    
+    The proximal operator is defined as:
+        prox_{λ||·||₀}(x) = x if |x| > √(2λ), else 0
+    """
     latex_name = r'$\ell_{0}$'
 
     @classmethod
-    def prox(cls, x: np.ndarray, v, *args, **kwargs) -> np.ndarray:
+    def prox(cls, x: np.ndarray, v: float, *args: Any, **kwargs: Any) -> np.ndarray:
+        """Compute the L0 proximal operator (hard-thresholding).
+        
+        Args:
+            x: Input vector or array
+            v: Regularization parameter λ
+            *args: Additional positional arguments
+            **kwargs: Additional keyword arguments
+            
+        Returns:
+            Hard-thresholded vector where elements below √(2λ) are set to zero
+        """
         condition = np.sqrt(2 * v * 1.0)
         absx = np.abs(x)
         return np.where(absx <= condition, 0.0, x)
 
     @classmethod
-    def name(cls):
+    def name(cls) -> str:
+        """Get the name of the proximal operator.
+        
+        Returns:
+            String identifier 'L0'
+        """
         return 'L0'
 
-    # @classmethod
-    # def latex_name(cls):
-    #     return r'$\ell_0$'
-
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> np.ndarray:
+        """Make the instance callable.
+        
+        Args:
+            *args: Positional arguments passed to prox method
+            **kwargs: Keyword arguments passed to prox method
+            
+        Returns:
+            Result of the proximal operation
+        """
         return super().__call__(*args, **kwargs)
 
 
