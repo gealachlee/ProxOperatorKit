@@ -78,40 +78,38 @@ l2_psi_prox_list: list[ProximalOperator] = [
     container.prox_2_CL1over2()
 ]
 
-model_prox_dict = {
-    'FISTA': cl_prox_list
-    # 'IMTC': l1_psi_prox_list
-}
-(x_test, d_test), A, b = create_sc_dataset(opts=opts)
+if __name__=="__main__":
+    model_prox_dict = {
+        'FISTA': cl_prox_list
+        # 'IMTC': l1_psi_prox_list
+    }
+    (x_test, d_test), A, b = create_sc_dataset(opts=opts)
 
-exp=MSELossExperiment()
+    exp=MSELossExperiment()
 
-total_results = exp.run(logger,opts, model_prox_dict)
+    total_results = exp.run(logger,opts, model_prox_dict)
+    res= total_results.results
+    import matplotlib.pyplot as plt
 
-#
-# #
-res= total_results.results
-import matplotlib.pyplot as plt
+    #
+    # from figure_generater.plot_config import PlotConfig
+    # plot_cfg = PlotConfig(json_files='./figure_generater/plot_config_compare_exp.json')
+    # plot_color=plot_cfg.plot_color
+    # fig, (ax1) = plt.subplots(1, 1, figsize=(16, 6))
+    # fig.subplots_adjust(hspace=0.5)  #
+    # for index, record in enumerate(total_results.results):
+    #     linestyle = '--' if 'Joint' in record.desc else '-'
+    #     ax1.plot(record.metrics, color=plot_color[index], linestyle=linestyle)
+    #     ax1.set_yscale('log')
+    #     ax1.set_yticks([10 ** 0, 10 ** -1, 10 ** -2, 10 ** -3, 10 ** -4],
+    #                    [r'$10^{0}$', r'$10^{-1}$', r'$10^{-2}$', r'$10^{-3}$', r'$10^{-4}$'])
+    #
+    # ax1.set_ylabel('Relative Error', fontdict={'fontsize': 12})
+    # ax1.set_xlabel('Iteration', fontdict={'fontsize': 12})
+    # plt.legend()
+    # plt.savefig('1.png')
 
-#
-# from figure_generater.plot_config import PlotConfig
-# plot_cfg = PlotConfig(json_files='./figure_generater/plot_config_compare_exp.json')
-# plot_color=plot_cfg.plot_color
-# fig, (ax1) = plt.subplots(1, 1, figsize=(16, 6))
-# fig.subplots_adjust(hspace=0.5)  #
-# for index, record in enumerate(total_results.results):
-#     linestyle = '--' if 'Joint' in record.desc else '-'
-#     ax1.plot(record.metrics, color=plot_color[index], linestyle=linestyle)
-#     ax1.set_yscale('log')
-#     ax1.set_yticks([10 ** 0, 10 ** -1, 10 ** -2, 10 ** -3, 10 ** -4],
-#                    [r'$10^{0}$', r'$10^{-1}$', r'$10^{-2}$', r'$10^{-3}$', r'$10^{-4}$'])
-#
-# ax1.set_ylabel('Relative Error', fontdict={'fontsize': 12})
-# ax1.set_xlabel('Iteration', fontdict={'fontsize': 12})
-# plt.legend()
-# plt.savefig('1.png')
-
-logger.info(f'{res[0].desc}--{res[0].metrics[-1]}')
-logger.info(f'{res[1].desc}--{res[1].metrics[-1]}')
-logger.info(f'{res[2].desc}--{res[2].metrics[-1]}')
-logger.info(f'{res[3].desc}--{res[3].metrics[-1]}')
+    logger.info(f'{res[0].desc}--{res[0].metrics[-1]}')
+    logger.info(f'{res[1].desc}--{res[1].metrics[-1]}')
+    logger.info(f'{res[2].desc}--{res[2].metrics[-1]}')
+    logger.info(f'{res[3].desc}--{res[3].metrics[-1]}')
