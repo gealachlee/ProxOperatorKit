@@ -7,11 +7,13 @@
 """
 
 from functools import lru_cache
+from typing import Dict, Callable
+
+import numpy as np
 from numpy.typing import NDArray
 from sklearn.preprocessing import normalize
-from common.enum import SepSparsityType
-import numpy as np
 
+from common.enum import SepSparsityType
 
 FloatArray = NDArray[np.floating]
 IntArray = NDArray[np.integer]
@@ -31,18 +33,58 @@ class SensingMatrixGenerator:
         return generate_sensing_mat(m, n)
 
 
+
+
 class NoiseGenerator:
-    @classmethod
-    def normal(cls, sig, loc, scale, m):
-        return sig * np.random.normal(loc, scale, (m, 1, 1))
+    _registry: Dict[str, Callable] = {}
 
     @classmethod
-    def laplace(cls, sig, loc, scale, m):
-        return sig * np.random.laplace(loc, scale, (m, 1, 1))
+    def register(cls, name: str):
+        """注册装饰器"""
+
+        def decorator(func: Callable) -> Callable:
+            cls._registry[name] = func
+            return func
+
+        return decorator
 
     @classmethod
-    def rand(cls, sig, m):
-        return sig * np.random.rand(m)
+    def create(cls, name: str, *args, **kwargs) -> np.ndarray:
+        """创建指定类型的噪声"""
+        if name not in cls._registry:
+            raise ValueError(f"未知的噪声类型: {name}。可用的类型: {list(cls._registry.keys())}")
+
+        generator_func = cls._registry[name]
+        return generator_func(*args, **kwargs)
+
+    @classmethod
+    def list_generators(cls) -> list:
+        """列出所有可用的噪声生成器"""
+        return list(cls._registry.keys())
+
+@NoiseGenerator.register("normal")
+def normal(sig: float, loc: float = 0.0, scale: float = 1.0, m: int = 1) -> np.ndarray:
+    """正态分布噪声"""
+    return sig * np.random.normal(loc, scale, (m, 1, 1))
+
+
+@NoiseGenerator.register("laplace")
+def laplace(sig: float, loc: float = 0.0, scale: float = 1.0, m: int = 1) -> np.ndarray:
+    """拉普拉斯分布噪声"""
+    return sig * np.random.laplace(loc, scale, (m, 1, 1))
+
+
+@NoiseGenerator.register("uniform")
+def uniform(sig: float, m: int = 1) -> np.ndarray:
+    """均匀分布噪声"""
+    return sig * np.random.rand(m, 1, 1)
+
+
+@NoiseGenerator.register("gaussian")
+def gaussian(sig: float, mean: float = 0.0, std: float = 1.0, m: int = 1) -> np.ndarray:
+    """高斯分布噪声"""
+    return sig * np.random.normal(mean, std, (m, 1, 1))
+
 
 
 class SparsityHandler:
@@ -119,12 +161,10 @@ def create_sc_dataset(opts) -> (np.ndarray, np.ndarray, np.ndarray, np.ndarray):
 
 def make_noise_data(opts):
     noise_params = opts.noise_params
-    m, loc, scale = opts.m, noise_params.loc, noise_params.scale
-    if noise_params.dist == 'normal':
-        noise = NoiseGenerator.normal(noise_params.sig, loc, scale, m)
-    elif noise_params.dist == 'laplace':
-        noise = NoiseGenerator.laplace(noise_params.sig, loc, scale, m)
-    else:
-        noise = NoiseGenerator.rand(noise_params.sig, m)
+    m, loc, scale,sig = opts.m, noise_params.loc, noise_params.scale,noise_params.sig
+    noise=NoiseGenerator.create(noise_params.dist , sig=sig, loc=loc, scale=scale, m=m)
     print(f'\n-----{noise_params.dist}--{noise_params.sig} noise added-----\n')
     return noise
+
+
+
